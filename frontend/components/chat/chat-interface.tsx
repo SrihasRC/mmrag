@@ -6,6 +6,9 @@ import { MessageInput } from "./message-input"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Trash2, Download } from "lucide-react"
+import { chatService } from "@/lib/services/chat-service"
+import { useApi } from "@/hooks/use-api"
+import type { ChatMessage } from "@/lib/api"
 
 export interface Message {
   id: string
@@ -52,41 +55,24 @@ export function ChatInterface({ selectedPdfId, onShowPdf }: ChatInterfaceProps) 
     setIsLoading(true)
 
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch('/api/v1/rag/query', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     question: content,
-      //     pdf_id: selectedPdfId,
-      //     top_k: 5
-      //   })
-      // })
-
-      // Simulate API response
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      // Use the real chat service
+      const response = await chatService.sendMessage({
+        message: content,
+        documentIds: selectedPdfId ? [selectedPdfId] : undefined
+      })
 
       const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: `This is a simulated response to your question: "${content}". In a real implementation, this would be the AI-generated answer based on your uploaded PDFs.`,
+        id: response.message.id,
+        content: response.message.content,
         role: 'assistant',
-        timestamp: new Date(),
-        sources: selectedPdfId ? [
-          {
-            pdf_id: selectedPdfId,
-            filename: "Research Paper.pdf",
-            page: 1,
-            content: "This is a sample reference from the PDF that was used to generate the answer...",
-            similarity_score: 0.95
-          },
-          {
-            pdf_id: selectedPdfId,
-            filename: "Research Paper.pdf", 
-            page: 3,
-            content: "Another relevant section from the document that supports the answer...",
-            similarity_score: 0.87
-          }
-        ] : undefined
+        timestamp: new Date(response.message.timestamp),
+        sources: response.references?.map(ref => ({
+          pdf_id: ref.documentId,
+          filename: `Document ${ref.documentId}`,
+          page: ref.pageNumber,
+          content: ref.snippet,
+          similarity_score: ref.relevanceScore
+        })) || []
       }
 
       setMessages(prev => [...prev, assistantMessage])

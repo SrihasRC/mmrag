@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import {
   Sidebar,
   SidebarContent,
@@ -22,14 +22,11 @@ import {
 } from "lucide-react"
 import { PDFUpload } from "@/components/pdf/pdf-upload"
 import { Input } from "@/components/ui/input"
+import { pdfService } from "@/lib/services/pdf-service"
+import { useApi } from "@/hooks/use-api"
+import type { PDFDocument } from "@/lib/api"
 
-interface PDF {
-  id: string
-  filename: string
-  status: 'processing' | 'completed' | 'error'
-  uploadedAt: string
-  size?: number
-}
+// Use PDFDocument type from API instead of local interface
 
 interface AppSidebarProps {
   onPdfSelect: (pdfId: string | null) => void
@@ -38,34 +35,24 @@ interface AppSidebarProps {
 
 export function AppSidebar({ onPdfSelect, selectedPdfId }: AppSidebarProps) {
   const { state } = useSidebar()
-  const [pdfs, setPdfs] = useState<PDF[]>([])
   const [searchQuery, setSearchQuery] = useState("")
-  
   const isCollapsed = state === "collapsed"
 
-  // Mock data for now - will be replaced with API calls
-  useEffect(() => {
-    // Simulate loading PDFs
-    const mockPdfs: PDF[] = [
-      {
-        id: "1",
-        filename: "Research Paper.pdf",
-        status: "completed",
-        uploadedAt: "2025-09-28T01:00:00Z",
-        size: 2048000
-      },
-      {
-        id: "2", 
-        filename: "Technical Manual.pdf",
-        status: "processing",
-        uploadedAt: "2025-09-28T01:15:00Z",
-        size: 5120000
-      }
-    ]
-    setPdfs(mockPdfs)
-  }, [])
+  // Use API service to fetch documents
+  const {
+    data: pdfs = [],
+    loading: isLoadingPdfs,
+    error: pdfError,
+    execute: fetchPdfs
+  } = useApi(pdfService.getDocuments, true)
 
-  const filteredPdfs = pdfs.filter(pdf => 
+  // Handle PDF upload completion
+  const handlePdfUpload = (_pdf: PDFDocument) => {
+    // Refresh the PDF list after upload
+    fetchPdfs()
+  }
+
+  const filteredPdfs = (pdfs || []).filter(pdf => 
     pdf.filename.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
@@ -101,9 +88,7 @@ export function AppSidebar({ onPdfSelect, selectedPdfId }: AppSidebarProps) {
         {/* Upload Area - only show when expanded */}
         {!isCollapsed && (
           <>
-            <PDFUpload onUploadComplete={(pdf) => {
-              setPdfs(prev => [pdf, ...prev])
-            }} />
+            <PDFUpload onUploadComplete={handlePdfUpload} />
             
             <Separator className="my-4" />
             
@@ -205,7 +190,7 @@ export function AppSidebar({ onPdfSelect, selectedPdfId }: AppSidebarProps) {
       <SidebarFooter className="p-4">
         {!isCollapsed && (
           <div className="text-xs text-muted-foreground">
-            {pdfs.length} document{pdfs.length !== 1 ? 's' : ''} uploaded
+            {(pdfs || []).length} document{(pdfs || []).length !== 1 ? 's' : ''} uploaded
           </div>
         )}
       </SidebarFooter>

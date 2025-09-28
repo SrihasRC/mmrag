@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import dynamic from 'next/dynamic'
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -13,8 +14,33 @@ import {
   Download, 
   ChevronLeft, 
   ChevronRight,
-  FileText
+  FileText,
+  Loader2
 } from "lucide-react"
+
+// Dynamically import react-pdf components to avoid SSR issues
+const Document = dynamic(
+  () => import('react-pdf').then((mod) => mod.Document),
+  { ssr: false }
+)
+
+const Page = dynamic(
+  () => import('react-pdf').then((mod) => mod.Page),
+  { ssr: false }
+)
+
+// Configure PDF.js worker - use CDN for reliability
+if (typeof window !== 'undefined') {
+  import('react-pdf').then((reactPdf) => {
+    // Use CDN worker for better compatibility
+    reactPdf.pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${reactPdf.pdfjs.version}/build/pdf.worker.min.js`
+  }).catch(() => {
+    // Fallback if the above fails
+    import('react-pdf').then((reactPdf) => {
+      reactPdf.pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${reactPdf.pdfjs.version}/legacy/build/pdf.worker.min.js`
+    })
+  })
+}
 
 interface PDFViewerProps {
   pdfId: string | null
@@ -25,10 +51,35 @@ export function PDFViewer({ pdfId, onClose }: PDFViewerProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [zoom, setZoom] = useState(100)
   const [rotation, setRotation] = useState(0)
+  const [numPages, setNumPages] = useState<number>(0)
+  const [isLoading, setIsLoading] = useState(true)
+  const [pdfFile, setPdfFile] = useState<string | null>(null)
+  const [pdfTitle, setPdfTitle] = useState<string>("")
   
-  // Mock data - in real implementation, this would come from API
-  const totalPages = 10
-  const pdfTitle = "Research Paper.pdf"
+  // Mock PDF URL - in real implementation, this would come from API
+  useEffect(() => {
+    if (pdfId) {
+      setIsLoading(true)
+      // Simulate API call to get PDF data
+      setTimeout(() => {
+        // For demo, we'll use a public PDF URL
+        setPdfFile("https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf")
+        setPdfTitle("Sample Research Paper.pdf")
+        setIsLoading(false)
+      }, 1000)
+    }
+  }, [pdfId])
+
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    setNumPages(numPages)
+    setCurrentPage(1)
+    setIsLoading(false)
+  }
+
+  const onDocumentLoadError = (error: Error) => {
+    console.error('Error loading PDF:', error)
+    setIsLoading(false)
+  }
 
   const handleZoomIn = () => {
     setZoom(prev => Math.min(prev + 25, 200))
@@ -47,7 +98,7 @@ export function PDFViewer({ pdfId, onClose }: PDFViewerProps) {
   }
 
   const handleNextPage = () => {
-    setCurrentPage(prev => Math.min(prev + 1, totalPages))
+    setCurrentPage(prev => Math.min(prev + 1, numPages))
   }
 
   if (!pdfId) {
@@ -70,7 +121,7 @@ export function PDFViewer({ pdfId, onClose }: PDFViewerProps) {
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-sm truncate">{pdfTitle}</h3>
           <p className="text-xs text-muted-foreground">
-            Page {currentPage} of {totalPages}
+            Page {currentPage} of {numPages}
           </p>
         </div>
         
@@ -97,14 +148,14 @@ export function PDFViewer({ pdfId, onClose }: PDFViewerProps) {
           </Button>
           
           <span className="text-xs text-muted-foreground px-2">
-            {currentPage} / {totalPages}
+            {currentPage} / {numPages}
           </span>
           
           <Button
             variant="ghost"
             size="sm"
             onClick={handleNextPage}
-            disabled={currentPage === totalPages}
+            disabled={currentPage === numPages}
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
@@ -158,26 +209,54 @@ export function PDFViewer({ pdfId, onClose }: PDFViewerProps) {
       <ScrollArea className="flex-1">
         <div className="p-4">
           <Card className="mx-auto max-w-fit">
-            {/* Placeholder for PDF content */}
-            <div 
-              className="bg-white border border-border shadow-sm"
-              style={{
-                width: `${(595 * zoom) / 100}px`,
-                height: `${(842 * zoom) / 100}px`,
-                transform: `rotate(${rotation}deg)`,
-                transformOrigin: 'center center'
-              }}
-            >
-              <div className="flex h-full items-center justify-center text-gray-400">
+            {isLoading ? (
+              <div className="flex h-96 w-96 items-center justify-center">
                 <div className="text-center">
-                  <FileText className="mx-auto h-16 w-16 mb-4" />
-                  <p className="text-sm">PDF Page {currentPage}</p>
-                  <p className="text-xs mt-2">
-                    In a real implementation, this would show the actual PDF content
-                  </p>
+                  <Loader2 className="mx-auto h-8 w-8 animate-spin mb-4" />
+                  <p className="text-sm text-muted-foreground">Loading PDF...</p>
                 </div>
               </div>
-            </div>
+            ) : pdfFile ? (
+              <Document
+                file={pdfFile}
+                onLoadSuccess={onDocumentLoadSuccess}
+                onLoadError={onDocumentLoadError}
+                loading={
+                  <div className="flex h-96 w-96 items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  </div>
+                }
+                error={
+                  <div className="flex h-96 w-96 items-center justify-center">
+                    <div className="text-center">
+                      <FileText className="mx-auto h-16 w-16 text-red-400 mb-4" />
+                      <p className="text-sm text-red-600">Failed to load PDF</p>
+                    </div>
+                  </div>
+                }
+              >
+                <div
+                  style={{
+                    transform: `rotate(${rotation}deg)`,
+                    transformOrigin: 'center center'
+                  }}
+                >
+                  <Page
+                    pageNumber={currentPage}
+                    scale={zoom / 100}
+                    renderTextLayer={true}
+                    renderAnnotationLayer={true}
+                  />
+                </div>
+              </Document>
+            ) : (
+              <div className="flex h-96 w-96 items-center justify-center">
+                <div className="text-center">
+                  <FileText className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+                  <p className="text-sm text-gray-600">No PDF selected</p>
+                </div>
+              </div>
+            )}
           </Card>
         </div>
       </ScrollArea>

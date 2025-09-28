@@ -5,17 +5,11 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Upload, X, Loader2 } from "lucide-react"
 import { useDropzone } from "react-dropzone"
-
-interface PDF {
-  id: string
-  filename: string
-  status: 'processing' | 'completed' | 'error'
-  uploadedAt: string
-  size?: number
-}
+import { pdfService } from "@/lib/services/pdf-service"
+import type { PDFDocument } from "@/lib/api"
 
 interface PDFUploadProps {
-  onUploadComplete: (pdf: PDF) => void
+  onUploadComplete: (pdf: PDFDocument) => void
 }
 
 export function PDFUpload({ onUploadComplete }: PDFUploadProps) {
@@ -44,6 +38,10 @@ export function PDFUpload({ onUploadComplete }: PDFUploadProps) {
     setUploadProgress(0)
 
     try {
+      setIsUploading(true)
+      setError(null)
+      setUploadProgress(0)
+
       // Simulate upload progress
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => {
@@ -55,41 +53,17 @@ export function PDFUpload({ onUploadComplete }: PDFUploadProps) {
         })
       }, 200)
 
-      // Create FormData for file upload
-      const formData = new FormData()
-      formData.append('file', file)
-
-      // TODO: Replace with actual API call
-      // const response = await fetch('/api/v1/rag/upload', {
-      //   method: 'POST',
-      //   body: formData,
-      // })
-
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // Use the actual PDF service
+      const result = await pdfService.uploadPDF(file)
       
       clearInterval(progressInterval)
       setUploadProgress(100)
 
-      // Mock successful response
-      const newPdf: PDF = {
-        id: Date.now().toString(),
-        filename: file.name,
-        status: 'processing',
-        uploadedAt: new Date().toISOString(),
-        size: file.size
-      }
-
-      onUploadComplete(newPdf)
-      
-      // Reset state
-      setTimeout(() => {
-        setIsUploading(false)
-        setUploadProgress(0)
-      }, 1000)
-
-    } catch {
-      setError('Upload failed. Please try again.')
+      // Call the completion handler with the uploaded document
+      onUploadComplete(result.document)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed')
+    } finally {
       setIsUploading(false)
       setUploadProgress(0)
     }
