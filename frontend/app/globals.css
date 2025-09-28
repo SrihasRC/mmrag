@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "highlight.js/styles/github-dark.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -159,4 +160,19 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  /* Dark color for the thumb */
+  background-color: #545454;
+}
+
+::-webkit-scrollbar-track {
+  /* Dark color for the track */
+  /* @apply bg-white */
+  background-color: #232325;
 }
