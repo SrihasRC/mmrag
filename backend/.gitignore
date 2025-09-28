@@ -75,10 +75,10 @@ tmp/
 # Storage directories (uploaded files, processed content)
 storage/uploads/*
 storage/content/*
-storage/vectordb/*
+storage/vector_db/*
 !storage/uploads/.gitkeep
 !storage/content/.gitkeep
-!storage/vectordb/.gitkeep
+!storage/vector_db/.gitkeep
 
 # Reference folder (if not needed in backend)
 ref/
