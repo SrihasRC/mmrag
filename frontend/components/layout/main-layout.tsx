@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "./app-sidebar"
-import { Header } from "./header"
 import { ChatInterface } from "@/components/chat/chat-interface"
 import { PDFViewer } from "@/components/pdf/pdf-viewer"
 
@@ -21,13 +20,10 @@ export function MainLayout() {
         />
         
         <SidebarInset className="flex-1">
-          {/* Header */}
-          <Header />
-          
           {/* Main Content */}
-          <div className="flex flex-1 overflow-hidden">
+          <div className="flex overflow-hidden">
             {/* Chat Interface */}
-            <div className={`flex-1 ${isPdfViewerOpen ? 'mr-96' : ''} transition-all duration-300`}>
+            <div className={`flex-1 ${isPdfViewerOpen ? 'mr-2' : ''} transition-all duration-300`}>
               <ChatInterface 
                 selectedPdfId={selectedPdfId}
                 onShowPdf={(pdfId) => {
@@ -39,7 +35,7 @@ export function MainLayout() {
             
             {/* PDF Viewer Panel */}
             {isPdfViewerOpen && (
-              <div className="w-96 border-l border-border bg-card">
+              <div className="border-l border-border bg-card w-[42%]">
                 <PDFViewer 
                   pdfId={selectedPdfId}
                   onClose={() => setIsPdfViewerOpen(false)}

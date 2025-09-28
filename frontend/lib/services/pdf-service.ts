@@ -10,14 +10,33 @@ export class PDFService {
   static async getDocuments(): Promise<PDFDocument[]> {
     const result = await api.getPDFs()
     // Transform backend response to match frontend expectations
-    return result.processed_pdfs.map((pdfId: unknown) => ({
-      id: String(pdfId),
-      filename: String(pdfId),
-      originalName: String(pdfId),
-      uploadDate: new Date().toISOString(),
-      fileSize: 0,
-      status: 'completed' as const,
-    }))
+    const documents = await Promise.all(
+      result.processed_pdfs.map(async (pdfId: unknown) => {
+        try {
+          // Try to get content to extract more info
+          const content = await api.getPDFContent(String(pdfId))
+          return {
+            id: String(pdfId),
+            filename: content.original_filename || `Document ${String(pdfId).slice(0, 8)}`,
+            originalName: content.original_filename || `Document ${String(pdfId).slice(0, 8)}.pdf`,
+            uploadDate: content.upload_date || new Date().toISOString(),
+            fileSize: content.file_size || 0,
+            status: 'completed' as const,
+          }
+        } catch {
+          // Fallback if content fetch fails
+          return {
+            id: String(pdfId),
+            filename: `Document ${String(pdfId).slice(0, 8)}`,
+            originalName: `Document ${String(pdfId).slice(0, 8)}.pdf`,
+            uploadDate: new Date().toISOString(),
+            fileSize: 0,
+            status: 'completed' as const,
+          }
+        }
+      })
+    )
+    return documents
   }
 
   // Get a specific PDF document by ID

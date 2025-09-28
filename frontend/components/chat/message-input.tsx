@@ -44,7 +44,7 @@ export function MessageInput({ onSendMessage, disabled, placeholder }: MessageIn
   }
 
   return (
-    <div className="flex items-end gap-2">
+    <div className="flex items-end gap-2 w-full">
       <div className="flex-1 relative">
         <Textarea
           ref={textareaRef}

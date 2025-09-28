@@ -115,80 +115,56 @@ export function ChatInterface({ selectedPdfId, onShowPdf }: ChatInterfaceProps) 
   }
 
   return (
-    <div className="flex h-full flex-col bg-background">
-      {/* Chat Header */}
-      <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
-        <div>
-          <h2 className="font-semibold text-card-foreground">
-            Chat Assistant
-          </h2>
-          {selectedPdfId && (
-            <p className="text-sm text-muted-foreground">
-              Context: Research Paper.pdf
-            </p>
-          )}
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={exportChat}
-            disabled={messages.length === 0}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={clearChat}
-            disabled={messages.length === 0}
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Clear
-          </Button>
-        </div>
-      </div>
-
-      {/* Messages Area */}
-      <div className="flex-1 overflow-hidden">
-        {messages.length === 0 ? (
-          <div className="flex h-full items-center justify-center">
-            <Card className="max-w-md p-6 text-center">
-              <h3 className="mb-2 text-lg font-semibold">Welcome to MMRAG Assistant</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Upload a PDF document and start asking questions about its content. 
-                I&apos;ll help you find relevant information and provide detailed answers.
-              </p>
-              <div className="space-y-2 text-xs text-muted-foreground">
-                <p>• Upload PDFs using the sidebar</p>
-                <p>• Ask questions about the content</p>
-                <p>• View source references in the PDF viewer</p>
+    <div className="flex h-full flex-col bg-background w-full">
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full">
+        {/* Messages Area */}
+        <div className="flex-1 overflow-hidden px-4 py-6 w-full">
+          {messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <div className="w-8 h-8 text-primary">💬</div>
               </div>
-            </Card>
-          </div>
-        ) : (
-          <MessageList 
-            messages={messages}
-            isLoading={isLoading}
-            onShowPdf={onShowPdf}
-          />
-        )}
-        <div ref={messagesEndRef} />
-      </div>
+              <div className="space-y-2">
+                <h2 className="text-2xl font-semibold">How can I help you today?</h2>
+                <p className="text-muted-foreground max-w-md">
+                  {selectedPdfId 
+                    ? "Ask me anything about your uploaded document. I'll provide answers based on the content."
+                    : "Upload a PDF document to start asking questions about it."
+                  }
+                </p>
+              </div>
+              {selectedPdfId && (
+                <div className="flex items-center space-x-2 text-sm text-muted-foreground bg-muted/50 px-3 py-2 rounded-lg">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span>Document ready for questions</span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <MessageList 
+              messages={messages}
+              isLoading={isLoading}
+              onShowPdf={onShowPdf}
+            />
+          )}
+          <div ref={messagesEndRef} />
+        </div>
 
-      {/* Message Input */}
-      <div className="border-t border-border bg-card p-4">
-        <MessageInput 
-          onSendMessage={handleSendMessage}
-          disabled={isLoading}
-          placeholder={
-            selectedPdfId 
-              ? "Ask a question about your document..." 
-              : "Upload a PDF first, then ask questions about it..."
-          }
-        />
+        {/* Input Area */}
+        <div className="fixed bottom-0 p-4">
+          {/* <div className="px-4 py-4"> */}
+            <MessageInput 
+              onSendMessage={handleSendMessage}
+              disabled={isLoading}
+              placeholder={
+                selectedPdfId 
+                  ? "Ask a question about your document..." 
+                  : "Upload a document to start chatting..."
+              }
+            />
+          {/* </div> */}
+        </div>
       </div>
     </div>
   )

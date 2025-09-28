@@ -207,57 +207,63 @@ export function PDFViewer({ pdfId, onClose }: PDFViewerProps) {
 
       {/* PDF Content */}
       <ScrollArea className="flex-1">
-        <div className="p-4">
-          <Card className="mx-auto max-w-fit">
+        <div className="flex justify-center p-4 min-h-full">
+          <div className="w-full max-w-4xl">
             {isLoading ? (
-              <div className="flex h-96 w-96 items-center justify-center">
+              <div className="flex h-96 items-center justify-center">
                 <div className="text-center">
                   <Loader2 className="mx-auto h-8 w-8 animate-spin mb-4" />
                   <p className="text-sm text-muted-foreground">Loading PDF...</p>
                 </div>
               </div>
             ) : pdfFile ? (
-              <Document
-                file={pdfFile}
-                onLoadSuccess={onDocumentLoadSuccess}
-                onLoadError={onDocumentLoadError}
-                loading={
-                  <div className="flex h-96 w-96 items-center justify-center">
-                    <Loader2 className="h-8 w-8 animate-spin" />
-                  </div>
-                }
-                error={
-                  <div className="flex h-96 w-96 items-center justify-center">
-                    <div className="text-center">
-                      <FileText className="mx-auto h-16 w-16 text-red-400 mb-4" />
-                      <p className="text-sm text-red-600">Failed to load PDF</p>
+              <div className="flex justify-center">
+                <Document
+                  file={pdfFile}
+                  onLoadSuccess={onDocumentLoadSuccess}
+                  onLoadError={onDocumentLoadError}
+                  loading={
+                    <div className="flex h-96 items-center justify-center">
+                      <Loader2 className="h-8 w-8 animate-spin" />
                     </div>
-                  </div>
-                }
-              >
-                <div
-                  style={{
-                    transform: `rotate(${rotation}deg)`,
-                    transformOrigin: 'center center'
-                  }}
+                  }
+                  error={
+                    <div className="flex h-96 items-center justify-center">
+                      <div className="text-center">
+                        <FileText className="mx-auto h-16 w-16 text-red-400 mb-4" />
+                        <p className="text-sm text-red-600">Failed to load PDF</p>
+                      </div>
+                    </div>
+                  }
+                  className="max-w-full"
                 >
-                  <Page
-                    pageNumber={currentPage}
-                    scale={zoom / 100}
-                    renderTextLayer={true}
-                    renderAnnotationLayer={true}
-                  />
-                </div>
-              </Document>
+                  <div
+                    className="flex justify-center"
+                    style={{
+                      transform: `rotate(${rotation}deg)`,
+                      transformOrigin: 'center center'
+                    }}
+                  >
+                    <Page
+                      pageNumber={currentPage}
+                      scale={zoom / 100}
+                      renderTextLayer={true}
+                      renderAnnotationLayer={true}
+                      className="shadow-lg border border-border rounded-lg overflow-hidden max-w-full"
+                      width={Math.min(800, window.innerWidth - 100)}
+                    />
+                  </div>
+                </Document>
+              </div>
             ) : (
-              <div className="flex h-96 w-96 items-center justify-center">
+              <div className="flex h-96 items-center justify-center">
                 <div className="text-center">
                   <FileText className="mx-auto h-16 w-16 text-gray-400 mb-4" />
                   <p className="text-sm text-gray-600">No PDF selected</p>
                 </div>
               </div>
             )}
-          </Card>
+          </div>
         </div>
       </ScrollArea>
 

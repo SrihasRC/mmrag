@@ -13,15 +13,31 @@ import {
 } from "@/components/ui/sidebar"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { 
   FileText, 
   Search, 
   MoreHorizontal,
   Loader2,
-  AlertCircle
+  Upload,
+  Settings,
+  LogOut,
+  User,
+  PanelLeftClose,
+  PanelLeft,
+  Plus
 } from "lucide-react"
-import { PDFUpload } from "@/components/pdf/pdf-upload"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { PDFUpload } from "@/components/pdf/pdf-upload"
 import { pdfService } from "@/lib/services/pdf-service"
 import { useApi } from "@/hooks/use-api"
 import type { PDFDocument } from "@/lib/api"
@@ -34,11 +50,10 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ onPdfSelect, selectedPdfId }: AppSidebarProps) {
-  const { state } = useSidebar()
+  const { state, toggleSidebar } = useSidebar()
   const [searchQuery, setSearchQuery] = useState("")
   const isCollapsed = state === "collapsed"
 
-  // Use API service to fetch documents
   const {
     data: pdfs = [],
     loading: isLoadingPdfs,
@@ -46,9 +61,7 @@ export function AppSidebar({ onPdfSelect, selectedPdfId }: AppSidebarProps) {
     execute: fetchPdfs
   } = useApi(pdfService.getDocuments, true)
 
-  // Handle PDF upload completion
   const handlePdfUpload = (_pdf: PDFDocument) => {
-    // Refresh the PDF list after upload
     fetchPdfs()
   }
 
@@ -64,133 +77,161 @@ export function AppSidebar({ onPdfSelect, selectedPdfId }: AppSidebarProps) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
 
-  const getStatusIcon = (status: PDF['status']) => {
-    switch (status) {
-      case 'processing':
-        return <Loader2 className="h-3 w-3 animate-spin text-yellow-500" />
-      case 'completed':
-        return <FileText className="h-3 w-3 text-green-500" />
-      case 'error':
-        return <AlertCircle className="h-3 w-3 text-red-500" />
-    }
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    })
   }
 
   return (
-    <Sidebar className="" collapsible="icon">
-      <SidebarHeader className="p-4">
-        <div className={`flex items-center gap-2 mb-4 ${isCollapsed ? 'justify-center' : ''}`}>
-          <FileText className="h-5 w-5 text-primary" />
-          {!isCollapsed && (
-            <span className="font-semibold text-sidebar-foreground">Documents</span>
-          )}
+    <Sidebar variant="inset" className="border-r">
+      <SidebarHeader className="border-b border-border">
+        <div className="flex h-16 items-center justify-between px-4">
+          <div className="flex items-center space-x-2">
+            <FileText className="h-6 w-6" />
+            {!isCollapsed && (
+              <span className="font-semibold">Documents</span>
+            )}
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleSidebar}
+            className="h-8 w-8 p-0"
+          >
+            {isCollapsed ? (
+              <PanelLeft className="h-4 w-4" />
+            ) : (
+              <PanelLeftClose className="h-4 w-4" />
+            )}
+          </Button>
         </div>
-        
-        {/* Upload Area - only show when expanded */}
+      </SidebarHeader>
+
+      <SidebarContent>
         {!isCollapsed && (
-          <>
-            <PDFUpload onUploadComplete={handlePdfUpload} />
-            
-            <Separator className="my-4" />
-            
-            {/* Search */}
+          <div className="p-4 space-y-4">
             <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search documents..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8"
+                className="pl-9"
               />
             </div>
-          </>
-        )}
-      </SidebarHeader>
 
-      <SidebarContent>
-        <ScrollArea className="flex-1 px-1">
-          <SidebarMenu>
-            {filteredPdfs.length === 0 ? (
-              !isCollapsed && (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <FileText className="h-12 w-12 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    {searchQuery ? "No documents found" : "No documents uploaded yet"}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {searchQuery ? "Try a different search term" : "Upload a PDF to get started"}
-                  </p>
-                </div>
-              )
+            {/* Upload Area */}
+            <PDFUpload onUploadComplete={handlePdfUpload} />
+          </div>
+        )}
+
+        <Separator />
+
+        <ScrollArea className="flex-1">
+          <div className="p-2">
+            {isLoadingPdfs ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+            ) : filteredPdfs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+                {!isCollapsed && (
+                  <div>
+                    <p className="text-sm font-medium">No documents yet</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Upload a PDF to get started
+                    </p>
+                  </div>
+                )}
+              </div>
             ) : (
-              filteredPdfs.map((pdf) => (
-                <SidebarMenuItem key={pdf.id}>
-                  {isCollapsed ? (
+              <SidebarMenu>
+                {filteredPdfs.map((pdf) => (
+                  <SidebarMenuItem key={pdf.id}>
                     <SidebarMenuButton
                       onClick={() => onPdfSelect(pdf.id)}
-                      className={`w-full justify-center p-2 h-10 ${
-                        selectedPdfId === pdf.id ? 'bg-sidebar-accent text-sidebar-primary' : ''
-                      }`}
-                      title={pdf.filename}
+                      isActive={selectedPdfId === pdf.id}
+                      className="w-full justify-start p-3 h-auto"
                     >
-                      <div className="flex items-center justify-center">
-                        {getStatusIcon(pdf.status)}
+                      <div className="flex items-start space-x-3 w-full min-w-0">
+                        <div className="flex-shrink-0">
+                          <FileText className="h-5 w-5 text-blue-500" />
+                        </div>
+                        
+                        {!isCollapsed && (
+                          <div className="flex-1 min-w-0 space-y-1">
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-medium truncate">
+                                {pdf.filename}
+                              </p>
+                            </div>
+                            
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <span>{formatFileSize(pdf.fileSize)} • {formatDate(pdf.uploadDate)}</span>
+                              <div className="flex items-center space-x-1">
+                                {pdf.status === 'processing' && (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                )}
+                                {pdf.status === 'completed' && (
+                                  <div className="h-2 w-2 bg-green-500 rounded-full" />
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </SidebarMenuButton>
-                  ) : (
-                    <div className="flex items-start gap-3 w-full p-3 rounded-md hover:bg-sidebar-accent transition-colors">
-                      <div className="flex-shrink-0 mt-0.5">
-                        {getStatusIcon(pdf.status)}
-                      </div>
-                      
-                      <SidebarMenuButton
-                        onClick={() => onPdfSelect(pdf.id)}
-                        className={`flex-1 min-w-0 justify-start p-0 h-auto bg-transparent hover:bg-transparent ${
-                          selectedPdfId === pdf.id ? 'text-sidebar-primary' : ''
-                        }`}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-sidebar-foreground truncate">
-                            {pdf.filename}
-                          </p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-xs text-muted-foreground">
-                              {pdf.size && formatFileSize(pdf.size)}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(pdf.uploadedAt).toLocaleDateString()}
-                            </span>
-                          </div>
-                          {pdf.status === 'processing' && (
-                            <p className="text-xs text-yellow-600 mt-1">Processing...</p>
-                          )}
-                          {pdf.status === 'error' && (
-                            <p className="text-xs text-red-600 mt-1">Processing failed</p>
-                          )}
-                        </div>
-                      </SidebarMenuButton>
-                      
-                      <button
-                        className="flex-shrink-0 h-6 w-6 rounded-md hover:bg-sidebar-accent-foreground/10 flex items-center justify-center"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          // Handle delete
-                        }}
-                      >
-                        <MoreHorizontal className="h-3 w-3" />
-                      </button>
-                    </div>
-                  )}
-                </SidebarMenuItem>
-              ))
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
             )}
-          </SidebarMenu>
+          </div>
         </ScrollArea>
       </SidebarContent>
 
-      <SidebarFooter className="p-4">
+      <SidebarFooter className="border-t border-border p-4">
         {!isCollapsed && (
-          <div className="text-xs text-muted-foreground">
-            {(pdfs || []).length} document{(pdfs || []).length !== 1 ? 's' : ''} uploaded
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="w-full justify-start p-2 h-auto">
+                <div className="flex items-center space-x-3">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src="/placeholder-avatar.jpg" />
+                    <AvatarFallback>U</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-medium">User</p>
+                    <p className="text-xs text-muted-foreground">user@example.com</p>
+                  </div>
+                  <MoreHorizontal className="h-4 w-4" />
+                </div>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem>
+                <User className="mr-2 h-4 w-4" />
+                Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>
+                <LogOut className="mr-2 h-4 w-4" />
+                Log out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+        
+        {!isCollapsed && (
+          <div className="text-xs text-muted-foreground text-center mt-2">
+            {filteredPdfs.length} document{filteredPdfs.length !== 1 ? 's' : ''}
           </div>
         )}
       </SidebarFooter>
