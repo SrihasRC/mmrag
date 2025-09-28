@@ -2,13 +2,8 @@
 
 import { useState, useRef, useEffect } from "react"
 import { MessageList } from "./message-list"
-import { MessageInput } from "./message-input"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Trash2, Download } from "lucide-react"
+import AIMessageInput from "@/components/kokonutui/ai-input-search"
 import { chatService } from "@/lib/services/chat-service"
-import { useApi } from "@/hooks/use-api"
-import type { ChatMessage } from "@/lib/api"
 
 export interface Message {
   id: string
@@ -115,16 +110,13 @@ export function ChatInterface({ selectedPdfId, onShowPdf }: ChatInterfaceProps) 
   }
 
   return (
-    <div className="flex h-full flex-col bg-background w-full">
+    <div className="flex h-screen overflow-auto flex-col bg-background w-full">
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full">
         {/* Messages Area */}
         <div className="flex-1 overflow-hidden px-4 py-6 w-full">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                <div className="w-8 h-8 text-primary">💬</div>
-              </div>
               <div className="space-y-2">
                 <h2 className="text-2xl font-semibold">How can I help you today?</h2>
                 <p className="text-muted-foreground max-w-md">
@@ -152,9 +144,8 @@ export function ChatInterface({ selectedPdfId, onShowPdf }: ChatInterfaceProps) 
         </div>
 
         {/* Input Area */}
-        <div className="fixed bottom-0 p-4">
-          {/* <div className="px-4 py-4"> */}
-            <MessageInput 
+        <div className="sticky bottom-0 p-2">
+            <AIMessageInput 
               onSendMessage={handleSendMessage}
               disabled={isLoading}
               placeholder={
@@ -163,7 +154,6 @@ export function ChatInterface({ selectedPdfId, onShowPdf }: ChatInterfaceProps) 
                   : "Upload a document to start chatting..."
               }
             />
-          {/* </div> */}
         </div>
       </div>
     </div>
