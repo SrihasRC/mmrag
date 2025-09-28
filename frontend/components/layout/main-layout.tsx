@@ -13,13 +13,15 @@ export function MainLayout() {
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar 
-          onPdfSelect={setSelectedPdfId}
-          selectedPdfId={selectedPdfId}
-        />
+      <div className="flex min-h-screen w-full overflow-hidden">
+        <div className="flex-shrink-0">
+          <AppSidebar 
+            onPdfSelect={setSelectedPdfId}
+            selectedPdfId={selectedPdfId}
+          />
+        </div>
         
-        <SidebarInset className="flex-1">
+        <SidebarInset className="flex-1 min-w-0 overflow-hidden">
           {/* Main Content */}
           <div className="flex overflow-hidden">
             {/* Chat Interface */}

@@ -19,17 +19,14 @@ import {
   Search, 
   MoreHorizontal,
   Loader2,
-  Upload,
   Settings,
   LogOut,
   User,
   PanelLeftClose,
   PanelLeft,
-  Plus
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,7 +37,6 @@ import {
 import { PDFUpload } from "@/components/pdf/pdf-upload"
 import { pdfService } from "@/lib/services/pdf-service"
 import { useApi } from "@/hooks/use-api"
-import type { PDFDocument } from "@/lib/api"
 
 // Use PDFDocument type from API instead of local interface
 
@@ -57,11 +53,10 @@ export function AppSidebar({ onPdfSelect, selectedPdfId }: AppSidebarProps) {
   const {
     data: pdfs = [],
     loading: isLoadingPdfs,
-    error: pdfError,
     execute: fetchPdfs
   } = useApi(pdfService.getDocuments, true)
 
-  const handlePdfUpload = (_pdf: PDFDocument) => {
+  const handlePdfUpload = () => {
     fetchPdfs()
   }
 
@@ -86,27 +81,26 @@ export function AppSidebar({ onPdfSelect, selectedPdfId }: AppSidebarProps) {
   }
 
   return (
-    <Sidebar variant="inset" className="border-r">
-      <SidebarHeader className="border-b border-border">
-        <div className="flex h-16 items-center justify-between px-4">
-          <div className="flex items-center space-x-2">
-            <FileText className="h-6 w-6" />
-            {!isCollapsed && (
-              <span className="font-semibold">Documents</span>
-            )}
-          </div>
+    <Sidebar variant="inset" className="border-r transition-all duration-50">
+      <SidebarHeader className="border-b border-border overflow-hidden">
+        <div className="flex items-center">
           <Button
             variant="ghost"
             size="sm"
             onClick={toggleSidebar}
-            className="h-8 w-8 p-0"
+            className="h-8 w-8 p-0 flex-shrink-0"
           >
             {isCollapsed ? (
-              <PanelLeft className="h-4 w-4" />
+              <PanelLeft className="h-6 w-6" />
             ) : (
-              <PanelLeftClose className="h-4 w-4" />
+              <PanelLeftClose className="h-6 w-6" />
             )}
           </Button>
+          <div className="flex items-center space-x-2 min-w-0">
+            {!isCollapsed && (
+              <span className="font-semibold truncate text-primary-foreground">MMRag</span>
+            )}
+          </div>
         </div>
       </SidebarHeader>
 
@@ -131,7 +125,7 @@ export function AppSidebar({ onPdfSelect, selectedPdfId }: AppSidebarProps) {
         <Separator />
 
         <ScrollArea className="flex-1">
-          <div className="p-2">
+          <div className="p-1">
             {isLoadingPdfs ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin" />
