@@ -9,8 +9,6 @@ export interface PDFDocument {
   uploadDate: string
   fileSize: number
   status: 'processing' | 'completed' | 'failed'
-  pageCount?: number
-  processingProgress?: number
 }
 
 export interface PDFUploadResponse {
@@ -26,8 +24,8 @@ export interface PDFUploadResponse {
     tables: string[]
     images: string[]
   }
-  storage_result?: any
-  embedding_result: any
+  storage_result?: Record<string, unknown>
+  embedding_result: Record<string, unknown>
   status: string
 }
 
@@ -106,7 +104,14 @@ export const api = {
   },
 
   // Query RAG system - matches backend: QueryRequest model
-  async queryRAG(question: string, pdf_id?: string, top_k: number = 5): Promise<any> {
+  async queryRAG(question: string, pdf_id?: string, top_k: number = 5): Promise<{
+    question: string
+    answer: string
+    references: DocumentReference[]
+    sources: Record<string, unknown>[]
+    pdf_id: string | null
+    retrieved_docs_count: number
+  }> {
     const payload = {
       question,
       pdf_id: pdf_id || null,
@@ -139,7 +144,12 @@ export const api = {
   },
 
   // Get processing status
-  async getStatus(pdf_id: string): Promise<any> {
+  async getStatus(pdf_id: string): Promise<{
+    pdf_id: string
+    content_stored: boolean
+    embeddings_created: boolean
+    status: string
+  }> {
     const response = await fetch(`${API_BASE_URL}/api/v1/rag/status/${pdf_id}`)
     
     if (!response.ok) {
@@ -150,7 +160,10 @@ export const api = {
   },
 
   // Delete PDF
-  async deletePDF(pdf_id: string): Promise<any> {
+  async deletePDF(pdf_id: string): Promise<{
+    message: string
+    deleted_items: Record<string, unknown>
+  }> {
     const response = await fetch(`${API_BASE_URL}/api/v1/rag/pdf/${pdf_id}`, {
       method: 'DELETE',
     })
@@ -163,7 +176,17 @@ export const api = {
   },
 
   // Get PDF content
-  async getPDFContent(pdf_id: string): Promise<any> {
+  async getPDFContent(pdf_id: string): Promise<{
+    pdf_id: string
+    metadata: Record<string, unknown>
+    original_filename: string
+    file_size: number
+    upload_date: string
+    text_files: string[]
+    table_files: string[]
+    image_files: string[]
+    summary_files: string[]
+  }> {
     const response = await fetch(`${API_BASE_URL}/api/v1/rag/content/${pdf_id}`)
     
     if (!response.ok) {
@@ -174,7 +197,11 @@ export const api = {
   },
 
   // Health check
-  async healthCheck(): Promise<any> {
+  async healthCheck(): Promise<{
+    status: string
+    vector_store: Record<string, unknown>
+    services: Record<string, string>
+  }> {
     const response = await fetch(`${API_BASE_URL}/api/v1/rag/health`)
     
     if (!response.ok) {
@@ -187,7 +214,7 @@ export const api = {
 
 // Legacy exports for compatibility with existing services
 export const apiClient = {
-  uploadFile: async <T>(endpoint: string, file: File, queryParams?: Record<string, string>): Promise<{ data: T }> => {
+  uploadFile: async <T>(endpoint: string, file: File): Promise<{ data: T }> => {
     if (endpoint === '/api/v1/rag/upload') {
       const result = await api.uploadPDF(file)
       return { data: result as T }
@@ -201,9 +228,13 @@ export const apiClient = {
     }
     throw new Error('Unsupported endpoint')
   },
-  post: async <T>(endpoint: string, data: any): Promise<{ data: T }> => {
+  post: async <T>(endpoint: string, data: Record<string, unknown>): Promise<{ data: T }> => {
     if (endpoint === '/api/v1/rag/query') {
-      const result = await api.queryRAG(data.question, data.pdf_id, data.top_k)
+      const result = await api.queryRAG(
+        data.question as string, 
+        data.pdf_id as string | undefined, 
+        data.top_k as number | undefined
+      )
       return { data: result as T }
     }
     throw new Error('Unsupported endpoint')
@@ -220,9 +251,9 @@ export const apiClient = {
 
 export class ApiError extends Error {
   public code: string
-  public details?: any
+  public details?: Record<string, unknown>
 
-  constructor({ message, code = 'API_ERROR', details }: { message: string; code?: string; details?: any }) {
+  constructor({ message, code = 'API_ERROR', details }: { message: string; code?: string; details?: Record<string, unknown> }) {
     super(message)
     this.name = 'ApiError'
     this.code = code
