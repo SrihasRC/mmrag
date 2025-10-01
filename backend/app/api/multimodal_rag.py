@@ -43,6 +43,9 @@ class UploadResponse(BaseModel):
     status: str
 
 
+# In-memory cache to prevent duplicate processing
+processing_cache = set()
+
 @router.post("/upload", response_model=UploadResponse)
 async def upload_and_process_pdf(
     file: UploadFile = File(...),
@@ -67,10 +70,32 @@ async def upload_and_process_pdf(
         if not file.filename.lower().endswith('.pdf'):
             raise HTTPException(status_code=400, detail="Only PDF files are allowed")
         
-        # Process the PDF through the complete pipeline
-        result = await multimodal_rag_service.process_pdf_complete(file, save_content)
+        # Create a unique identifier for this upload to prevent duplicates
+        file_content = await file.read()
+        file.file.seek(0)  # Reset file pointer
         
-        return UploadResponse(**result)
+        import hashlib
+        file_hash = hashlib.md5(file_content).hexdigest()
+        upload_key = f"{file.filename}_{file_hash}"
+        
+        # Check if we're already processing this exact file
+        if upload_key in processing_cache:
+            logger.warning(f"Duplicate upload detected for {file.filename}, skipping...")
+            raise HTTPException(status_code=429, detail="File is already being processed")
+        
+        try:
+            # Mark as processing
+            processing_cache.add(upload_key)
+            
+            # Process the PDF through the complete pipeline
+            result = await multimodal_rag_service.process_pdf_complete(file, save_content)
+            
+            logger.info(f"Successfully processed PDF: {file.filename} -> {result['pdf_id']}")
+            return UploadResponse(**result)
+            
+        finally:
+            # Remove from processing cache when done
+            processing_cache.discard(upload_key)
         
     except HTTPException:
         raise
@@ -202,14 +227,14 @@ async def search_vector_store(
             filter_metadata=filter_metadata
         )
         
-        # Format results for JSON response
-        formatted_results = []
-        for doc, score in results:
-            formatted_results.append({
+        formatted_results = [
+            {
                 "content": doc.page_content,
                 "metadata": doc.metadata,
-                "similarity_score": float(score)
-            })
+                "score": score
+            }
+            for doc, score in results
+        ]
         
         return {
             "query": query,
@@ -222,29 +247,99 @@ async def search_vector_store(
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 
 
-@router.get("/health")
-async def health_check():
-    """Health check endpoint for the RAG system."""
+@router.get("/debug/{pdf_id}")
+async def debug_pdf_content(pdf_id: str):
+    """Debug endpoint to check what content is stored for a PDF."""
     try:
-        # Check vector store health
-        vector_health = vector_store_service.health_check()
+        # Get all documents for this PDF from vector store
+        all_docs = await vector_store_service.similarity_search(
+            query="",  # Empty query to get all
+            k=100,
+            filter_metadata={"pdf_id": pdf_id}
+        )
         
-        # Check if services are properly initialized
-        services_status = {
-            "multimodal_rag_service": "initialized",
-            "content_storage": "initialized",
-            "vector_store_service": "initialized"
+        debug_info = {
+            "pdf_id": pdf_id,
+            "total_documents": len(all_docs),
+            "content_types": {},
+            "sample_content": []
         }
         
+        for doc in all_docs:
+            content_type = doc.metadata.get("content_type", "unknown")
+            debug_info["content_types"][content_type] = debug_info["content_types"].get(content_type, 0) + 1
+            
+            # Add sample content for debugging
+            if len(debug_info["sample_content"]) < 10:
+                debug_info["sample_content"].append({
+                    "content_type": content_type,
+                    "content_preview": doc.page_content[:300] + "..." if len(doc.page_content) > 300 else doc.page_content,
+                    "metadata": doc.metadata,
+                    "full_length": len(doc.page_content)
+                })
+        
+        return debug_info
+        
+    except Exception as e:
+        logger.error(f"Error in debug endpoint: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Debug failed: {str(e)}")
+
+
+@router.get("/health")
+async def rag_health_check():
+    """RAG system health check."""
+    try:
+        vector_stats = vector_store_service.get_collection_stats()
+        
         return {
-            "status": "healthy" if vector_health["status"] == "healthy" else "degraded",
-            "services": services_status,
-            "vector_store_health": vector_health
+            "status": "healthy",
+            "vector_store": vector_stats,
+            "services": {
+                "pdf_processor": "active",
+                "multimodal_rag": "active",
+                "vector_store": "active"
+            }
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Health check failed: {str(e)}")
+
+
+@router.delete("/clear-all")
+async def clear_all_data():
+    """Clear all uploaded PDFs and processed data (for testing purposes)."""
+    try:
+        import shutil
+        import os
+        
+        # Clear storage directories
+        storage_path = "./storage"
+        for subdir in ["uploads", "content", "vector_db"]:
+            dir_path = os.path.join(storage_path, subdir)
+            if os.path.exists(dir_path):
+                shutil.rmtree(dir_path)
+                os.makedirs(dir_path, exist_ok=True)
+        
+        # Clear processing cache
+        global processing_cache
+        processing_cache.clear()
+        
+        # Clear vector store
+        vector_store_service.clear_all_documents()
+        
+        logger.info("Successfully cleared all data")
+        
+        return {
+            "status": "success",
+            "message": "All data cleared successfully",
+            "cleared": {
+                "uploads": True,
+                "content": True,
+                "vector_db": True,
+                "processing_cache": True
+            }
         }
         
     except Exception as e:
-        logger.error(f"Health check failed: {str(e)}")
-        return {
-            "status": "unhealthy",
-            "error": str(e)
-        }
+        logger.error(f"Error clearing data: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to clear data: {str(e)}")
