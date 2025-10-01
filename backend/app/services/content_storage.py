@@ -216,6 +216,21 @@ class ContentStorageService:
         
         return content
     
+    def get_text_chunk(self, pdf_id: str, chunk_index: int) -> str:
+        """Get specific text chunk by index."""
+        pdf_folder = self.content_path / pdf_id
+        text_file = pdf_folder / "texts" / f"text_chunk_{chunk_index:03d}.txt"
+        
+        if not text_file.exists():
+            return "Text chunk not found"
+        
+        try:
+            with open(text_file, 'r', encoding='utf-8') as f:
+                return f.read()
+        except Exception as e:
+            logger.error(f"Error reading text chunk {chunk_index} for PDF {pdf_id}: {str(e)}")
+            return "Error reading text chunk"
+    
     def list_processed_pdfs(self) -> List[str]:
         """Get list of all processed PDF IDs."""
         if not self.content_path.exists():

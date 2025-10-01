@@ -459,22 +459,35 @@ class MultimodalRAGService:
             
             answer = await self._run_qa_chain(qa_input)
             
-            # Prepare sources information from enhanced context
-            sources = [
-                {
-                    "source": doc.metadata.get("source", "unknown"),
-                    "content_type": doc.metadata.get("content_type", "unknown"),
-                    "pdf_id": doc.metadata.get("pdf_id", "unknown"),
-                    "chunk_index": doc.metadata.get("chunk_index", -1)
-                }
-                for doc in enhanced_context
-            ]
+            # Prepare references using original text chunks from storage
+            references = []
+            for doc in retrieved_docs:
+                doc_pdf_id = doc.metadata.get("pdf_id", "unknown")
+                chunk_index = doc.metadata.get("chunk_index", 0)
+                
+                # Get original text chunk from storage instead of summary
+                snippet = doc.page_content[:800] if doc.page_content else "No content available"
+                try:
+                    if doc_pdf_id != "unknown":
+                        original_content = content_storage.get_text_chunk(doc_pdf_id, chunk_index)
+                        if original_content and original_content != "Text chunk not found":
+                            snippet = original_content  # Don't truncate - show full content
+                except Exception as e:
+                    logger.warning(f"Could not load original text chunk for {doc_pdf_id}:{chunk_index}, using fallback")
+                
+                references.append({
+                    "documentId": doc_pdf_id,
+                    "pageNumber": doc.metadata.get("page_number", 1),
+                    "snippet": snippet,
+                    "relevanceScore": getattr(doc, 'similarity_score', 0.8),
+                    "contentType": doc.metadata.get("content_type", "text")
+                })
             
             result = {
                 "question": question,
                 "answer": answer,
-                "retrieved_docs_count": len(enhanced_context),
-                "sources": sources,
+                "references": references,  # Frontend expects this
+                "sources": [],  # Keep for backward compatibility
                 "pdf_id": pdf_id,
                 "retrieved_docs_count": len(retrieved_docs)
             }

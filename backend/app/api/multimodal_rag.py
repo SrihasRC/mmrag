@@ -25,7 +25,8 @@ class QueryRequest(BaseModel):
 class QueryResponse(BaseModel):
     question: str
     answer: str
-    sources: List[Dict[str, Any]]
+    references: List[Dict[str, Any]]
+    sources: List[Dict[str, Any]]  # Keep for backward compatibility
     pdf_id: Optional[str]
     retrieved_docs_count: int
 
