@@ -33,27 +33,38 @@ class MultimodalRAGService:
         self.qa_chain = self._create_qa_chain()
     
     def _create_text_summarizer(self):
-        """Create chain for summarizing text and tables."""
+        """Create chain for summarizing text and tables with detail preservation."""
         prompt_text = """
-        You are an assistant tasked with summarizing tables and text.
-        Give a concise summary of the table or text.
+        You are an assistant tasked with creating detailed, informative summaries that preserve all important information.
         
-        Respond only with the summary, no additional comment.
-        Do not start your message by saying "Here is a summary" or anything like that.
-        Just give the summary as it is.
+        Document Type: {doc_type}
+        Document Context: {doc_context}
         
-        Table or text chunk: {element}
+        Content to summarize: {element}
+        
+        Instructions:
+        - For resumes: Include ALL names, numbers, percentages, GPAs, companies, projects, skills, and dates
+        - For academic papers: Preserve technical details, figures, and specific findings
+        - For any document: Keep specific details like scores, percentages, names, locations, technologies
+        - DO NOT omit numerical data, proper nouns, or specific technical terms
+        - Create a comprehensive summary that someone could use to answer detailed questions
+        
+        Provide a detailed summary that preserves all key information:
         """
         
         prompt = ChatPromptTemplate.from_template(prompt_text)
-        model = ChatGroq(temperature=0.5, model="llama-3.1-8b-instant")
-        return {"element": lambda x: x} | prompt | model | StrOutputParser()
+        model = ChatGroq(temperature=0.1, model="llama-3.1-8b-instant")  # Lower temperature for consistency
+        return prompt | model | StrOutputParser()
     
     def _create_image_summarizer(self):
-        """Create chain for summarizing images using Gemini 2.5 Flash."""
-        prompt_template = """Describe the image in detail. For context,
-                          the image is part of a research paper explaining the transformers
-                          architecture. Be specific about graphs, such as bar plots."""
+        """Create chain for summarizing images using Gemini 2.5 Flash with context."""
+        # Updated to handle context parameter
+        prompt_template = """Describe the image in detail. 
+        
+        {context}
+        
+        Focus on details that would be relevant for answering questions about this document.
+        Be specific about graphs, charts, diagrams, and any text visible in the image."""
         
         messages = [
             (
@@ -61,7 +72,7 @@ class MultimodalRAGService:
                 [
                     {"type": "text", "text": prompt_template},
                     {
-                        "type": "image_url",
+                        "type": "image_url", 
                         "image_url": {"url": "data:image/jpeg;base64,{image}"},
                     },
                 ],
@@ -107,14 +118,130 @@ class MultimodalRAGService:
             | StrOutputParser()
         )
     
+    def _create_document_context(self, processing_result: Dict, doc_type: str) -> str:
+        """Create a brief document context for better summarization."""
+        try:
+            separated_elements = processing_result.get("separated_elements", {})
+            total_texts = len(separated_elements.get('texts', []))
+            total_tables = len(separated_elements.get('tables', []))
+            total_images = len(separated_elements.get('images', []))
+            
+            # Get first few sentences for context
+            context_text = ""
+            text_content = processing_result.get("text_content", [])
+            if text_content:
+                # Get first 200 chars as context
+                context_text = text_content[0][:200].strip() + "..." if text_content[0] else ""
+            
+            context = f"""
+            Document Overview:
+            - Type: {doc_type}
+            - Structure: {total_texts} text sections, {total_tables} tables, {total_images} images
+            - Opening content: {context_text}
+            """
+            
+            return context.strip()
+        except Exception as e:
+            logger.warning(f"Could not create document context: {str(e)}")
+            return f"Document type: {doc_type}"
+    
+    def _should_preserve_raw_content(self, doc_type: str, total_length: int) -> bool:
+        """Determine if we should preserve raw content alongside summaries."""
+        # For short documents like resumes, preserve raw content
+        if doc_type in ["resume", "short_document"] or total_length < 8000:
+            return True
+        return False
+    
+    async def _enhance_context_for_query(self, retrieved_docs: List, question: str, pdf_id: Optional[str] = None) -> List:
+        """Enhance context by adding related chunks for better coherence."""
+        if not retrieved_docs:
+            return retrieved_docs
+        
+        try:
+            # For documents with few chunks (like resumes), get more context
+            if pdf_id:
+                # Get document statistics to determine if it's a short document
+                all_docs_for_pdf = await vector_store_service.similarity_search(
+                    query="",  # Empty query to get all docs
+                    k=50,  # Get many documents
+                    filter_metadata={"pdf_id": pdf_id}
+                )
+                
+                # If it's a short document (< 5 chunks), include more context
+                if len(all_docs_for_pdf) <= 5:
+                    logger.info(f"Short document detected ({len(all_docs_for_pdf)} chunks). Including full context.")
+                    # For short documents, return more comprehensive context
+                    enhanced_docs = all_docs_for_pdf[:8]  # Get more chunks
+                    
+                    # Sort by chunk_index if available for better flow
+                    try:
+                        enhanced_docs.sort(key=lambda x: x.metadata.get("chunk_index", 0))
+                    except:
+                        pass
+                        
+                    return enhanced_docs
+            
+            # For longer documents, enhance with neighboring chunks
+            enhanced_docs = list(retrieved_docs)
+            
+            # Try to get neighboring chunks for better context
+            for doc in retrieved_docs[:3]:  # Only for top 3 results
+                try:
+                    chunk_index = doc.metadata.get("chunk_index", -1)
+                    doc_pdf_id = doc.metadata.get("pdf_id")
+                    
+                    if chunk_index >= 0 and doc_pdf_id:
+                        # Try to get previous and next chunk
+                        for neighbor_index in [chunk_index - 1, chunk_index + 1]:
+                            if neighbor_index >= 0:
+                                neighbor_docs = await vector_store_service.similarity_search(
+                                    query=question,
+                                    k=20,
+                                    filter_metadata={
+                                        "pdf_id": doc_pdf_id,
+                                        "chunk_index": neighbor_index
+                                    }
+                                )
+                                
+                                # Add if not already present
+                                for neighbor in neighbor_docs:
+                                    if neighbor not in enhanced_docs:
+                                        enhanced_docs.append(neighbor)
+                                        
+                except Exception as e:
+                    logger.warning(f"Could not get neighboring chunks: {str(e)}")
+                    continue
+            
+            # Limit to reasonable size and sort by relevance
+            enhanced_docs = enhanced_docs[:10]
+            logger.info(f"Enhanced context from {len(retrieved_docs)} to {len(enhanced_docs)} documents")
+            
+            return enhanced_docs
+            
+        except Exception as e:
+            logger.warning(f"Error enhancing context: {str(e)}")
+            return retrieved_docs  # Fallback to original docs
+    
     async def process_pdf_complete(self, file, save_content: bool = True) -> Dict[str, Any]:
         """Complete PDF processing pipeline with summarization and vector storage."""
         try:
+            # Get file metadata before processing
+            file_content = await file.read()
+            await file.seek(0)  # Reset file pointer
+            file_size = len(file_content)
+            
             # Step 1: Process PDF and extract elements
-            logger.info(f"Starting complete PDF processing for: {file.filename}")
+            logger.info(f"Starting complete PDF processing for: {file.filename} ({file_size} bytes)")
             processing_result = await pdf_processor.process_pdf_file(file)
             
             pdf_id = processing_result["file_id"]
+            
+            # Add file metadata to processing result
+            processing_result["file_metadata"] = {
+                "original_filename": file.filename,
+                "file_size": file_size,
+                "upload_date": processing_result.get("processing_timestamp", "")
+            }
             
             # Step 2: Generate summaries
             logger.info(f"Generating summaries for PDF: {pdf_id}")
@@ -151,48 +278,98 @@ class MultimodalRAGService:
             raise HTTPException(status_code=500, detail=f"PDF processing failed: {str(e)}")
     
     async def _generate_all_summaries(self, processing_result: Dict[str, Any]) -> Dict[str, List[str]]:
-        """Generate summaries for all content types."""
+        """Generate summaries for all content types with document context awareness."""
         summaries = {}
         
-        # Summarize text content
+        # Get document context
+        doc_type = processing_result.get("document_type", "general")
+        doc_context = self._create_document_context(processing_result, doc_type)
+        
+        # Check if we should preserve raw content for short documents
+        total_length = sum(len(text) for text in processing_result.get("text_content", []))
+        preserve_raw = self._should_preserve_raw_content(doc_type, total_length)
+        
+        logger.info(f"Generating context-aware summaries for {doc_type} document (preserve_raw: {preserve_raw})")
+        
+        # Summarize text content with context
         text_content = processing_result.get("text_content", [])
         if text_content:
-            logger.info(f"Summarizing {len(text_content)} text chunks")
-            summaries["text"] = await self._summarize_text_batch(text_content)
+            logger.info(f"Summarizing {len(text_content)} text chunks with document context")
+            text_summaries = await self._summarize_text_batch(text_content, doc_type, doc_context)
+            
+            # For short documents, combine summaries with raw content for better retrieval
+            if preserve_raw:
+                enhanced_summaries = []
+                for i, (summary, raw_text) in enumerate(zip(text_summaries, text_content)):
+                    # Combine summary with key raw excerpts
+                    enhanced_summary = f"{summary}\n\nKey details from original: {raw_text[:500]}..."
+                    enhanced_summaries.append(enhanced_summary)
+                summaries["text"] = enhanced_summaries
+            else:
+                summaries["text"] = text_summaries
         
-        # Summarize tables
+        # Summarize tables with context
         tables_html = processing_result.get("tables_html", [])
         if tables_html:
-            logger.info(f"Summarizing {len(tables_html)} tables")
-            summaries["tables"] = await self._summarize_text_batch(tables_html)
+            logger.info(f"Summarizing {len(tables_html)} tables with document context")
+            summaries["tables"] = await self._summarize_text_batch(tables_html, doc_type, doc_context)
         
-        # Summarize images
+        # Summarize images with context
         images_base64 = processing_result.get("images_base64", [])
         if images_base64:
-            logger.info(f"Summarizing {len(images_base64)} images")
-            summaries["images"] = await self._summarize_images_batch(images_base64)
+            logger.info(f"Summarizing {len(images_base64)} images with document context")
+            summaries["images"] = await self._summarize_images_batch(images_base64, doc_type, doc_context)
         
         return summaries
     
-    async def _summarize_text_batch(self, text_list: List[str]) -> List[str]:
-        """Summarize a batch of text/table content."""
+    async def _summarize_text_batch(self, text_list: List[str], doc_type: str = "general", doc_context: str = "") -> List[str]:
+        """Summarize a batch of text/table content with document context."""
         try:
-            summaries = self.text_summarizer.batch(text_list, {"max_concurrency": 3})
+            # Create context-aware inputs
+            context_inputs = [
+                {
+                    "element": text,
+                    "doc_type": doc_type,
+                    "doc_context": doc_context
+                }
+                for text in text_list
+            ]
+            
+            summaries = self.text_summarizer.batch(context_inputs, {"max_concurrency": 2})
             return summaries
         except Exception as e:
-            logger.error(f"Error in text summarization: {str(e)}")
-            return [f"Error summarizing content: {str(e)}" for _ in text_list]
+            logger.error(f"Error in context-aware text summarization: {str(e)}")
+            # Fallback to simple summarization without context
+            try:
+                simple_inputs = [{"element": text, "doc_type": doc_type, "doc_context": ""} for text in text_list]
+                return self.text_summarizer.batch(simple_inputs, {"max_concurrency": 2})
+            except:
+                return [f"Error summarizing content: {str(e)}" for _ in text_list]
     
-    async def _summarize_images_batch(self, images_base64: List[str]) -> List[str]:
-        """Summarize a batch of images."""
+    async def _summarize_images_batch(self, images_base64: List[str], doc_type: str = "general", doc_context: str = "") -> List[str]:
+        """Summarize a batch of images with document context."""
         try:
-            # Format images for the chain (using 'image' parameter as in notebook)
-            formatted_images = [{"image": img} for img in images_base64]
-            summaries = self.image_summarizer.batch(formatted_images, {"max_concurrency": 2})
+            # Create context-aware image prompt
+            context_prompt = f"""
+            Document Type: {doc_type}
+            Context: {doc_context}
+            
+            Describe this image in detail, considering its role in a {doc_type} document.
+            Focus on relevant details that would help answer questions about this document.
+            """
+            
+            # Format images with context for the chain
+            formatted_images = [{"image": img, "context": context_prompt} for img in images_base64]
+            summaries = self.image_summarizer.batch(formatted_images, {"max_concurrency": 1})  # Slower for better quality
             return summaries
         except Exception as e:
-            logger.error(f"Error in image summarization: {str(e)}")
-            return [f"Error summarizing image: {str(e)}" for _ in images_base64]
+            logger.error(f"Error in context-aware image summarization: {str(e)}")
+            # Fallback to simple image summarization
+            try:
+                simple_images = [{"image": img} for img in images_base64]
+                return self.image_summarizer.batch(simple_images, {"max_concurrency": 2})
+            except:
+                return [f"Error summarizing image: {str(e)}" for _ in images_base64]
     
     async def _create_and_store_embeddings(self, pdf_id: str, processing_result: Dict[str, Any], summaries: Dict[str, List[str]]) -> Dict[str, Any]:
         """Create embeddings and store in vector database."""
@@ -250,7 +427,7 @@ class MultimodalRAGService:
             raise
     
     async def query_rag(self, question: str, pdf_id: Optional[str] = None, top_k: int = 5) -> Dict[str, Any]:
-        """Query the RAG system."""
+        """Query the RAG system with enhanced document-level context awareness."""
         try:
             logger.info(f"Processing RAG query: {question}")
             
@@ -267,18 +444,22 @@ class MultimodalRAGService:
                     "question": question,
                     "answer": "I couldn't find any relevant information to answer your question.",
                     "sources": [],
-                    "pdf_id": pdf_id
+                    "pdf_id": pdf_id,
+                    "retrieved_docs_count": 0
                 }
             
-            # Generate answer using QA chain
+            # For short documents or resumes, get additional context
+            enhanced_context = await self._enhance_context_for_query(retrieved_docs, question, pdf_id)
+            
+            # Generate answer using QA chain with enhanced context
             qa_input = {
                 "question": question,
-                "context": retrieved_docs
+                "context": enhanced_context
             }
             
             answer = await self._run_qa_chain(qa_input)
             
-            # Prepare sources information
+            # Prepare sources information from enhanced context
             sources = [
                 {
                     "source": doc.metadata.get("source", "unknown"),
@@ -286,12 +467,13 @@ class MultimodalRAGService:
                     "pdf_id": doc.metadata.get("pdf_id", "unknown"),
                     "chunk_index": doc.metadata.get("chunk_index", -1)
                 }
-                for doc in retrieved_docs
+                for doc in enhanced_context
             ]
             
             result = {
                 "question": question,
                 "answer": answer,
+                "retrieved_docs_count": len(enhanced_context),
                 "sources": sources,
                 "pdf_id": pdf_id,
                 "retrieved_docs_count": len(retrieved_docs)
