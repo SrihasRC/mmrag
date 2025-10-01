@@ -89,9 +89,9 @@ export function ChatInterface({ selectedPdfId, onShowPdf }: ChatInterfaceProps) 
   return (
     <div className="flex h-screen overflow-auto flex-col bg-background w-full">
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col max-w-3xl mx-auto w-full">
+      <div className="flex-1 flex flex-col max-w-[52rem] mx-auto w-full">
         {/* Messages Area */}
-        <div className="flex-1 overflow-hidden px-4 py-6 w-full">
+        <div className="flex-1 overflow-hidden py-6 w-full">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
               <div className="space-y-2">

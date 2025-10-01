@@ -53,16 +53,20 @@ export function MessageBubble({ message, onShowPdf }: MessageBubbleProps) {
   }
 
   return (
-    <div className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-      <div className={`max-w-[85%] space-y-2 ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
-        <Card className={`p-3 ${
-          message.role === 'user' 
-            ? 'bg-muted text-primary-foreground ml-auto' 
-            : 'bg-card text-card-foreground'
-        }`}>
+    <div className={`flex gap-3 tracking-wide ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+      <div className={`max-w-[92%] space-y-2 ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
+        <Card 
+          className={`p-3 border-none shadow-none group relative ${
+            message.role === 'user' 
+              ? 'bg-muted text-primary-foreground ml-auto cursor-pointer hover:bg-muted/80' 
+              : 'bg-card text-card-foreground'
+          }`}
+          onClick={message.role === 'user' ? copyToClipboard : undefined}
+          title={message.role === 'user' ? 'Click to copy message' : undefined}
+        >
           <div className="space-y-2">
             {message.role === 'assistant' ? (
-              <div className="text-sm prose prose-sm max-w-none dark:prose-invert">
+              <div className="text-base leading-relaxed prose prose-base max-w-none dark:prose-invert">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypeHighlight]}
@@ -76,18 +80,18 @@ export function MessageBubble({ message, onShowPdf }: MessageBubbleProps) {
                           </code>
                         </pre>
                       ) : (
-                        <code className="bg-muted px-1 py-0.5 rounded text-sm" {...props}>
+                        <code className="bg-muted px-1 py-0.5 rounded text-base" {...props}>
                           {children}
                         </code>
                       )
                     },
-                    p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                    ul: ({ children }) => <ul className="list-disc list-inside mb-2">{children}</ul>,
-                    ol: ({ children }) => <ol className="list-decimal list-inside mb-2">{children}</ol>,
-                    li: ({ children }) => <li className="mb-1">{children}</li>,
-                    h1: ({ children }) => <h1 className="text-lg font-bold mb-2">{children}</h1>,
-                    h2: ({ children }) => <h2 className="text-base font-bold mb-2">{children}</h2>,
-                    h3: ({ children }) => <h3 className="text-sm font-bold mb-2">{children}</h3>,
+                    p: ({ children }) => <p className="mb-3 last:mb-0 text-base leading-relaxed">{children}</p>,
+                    ul: ({ children }) => <ul className="list-disc list-inside mb-3 text-base leading-relaxed">{children}</ul>,
+                    ol: ({ children }) => <ol className="list-decimal list-inside mb-3 text-base leading-relaxed">{children}</ol>,
+                    li: ({ children }) => <li className="mb-2 text-base leading-relaxed">{children}</li>,
+                    h1: ({ children }) => <h1 className="text-xl font-bold mb-3 leading-tight">{children}</h1>,
+                    h2: ({ children }) => <h2 className="text-lg font-bold mb-3 leading-tight">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-base font-bold mb-2 leading-tight">{children}</h3>,
                     blockquote: ({ children }) => (
                       <blockquote className="border-l-4 border-muted-foreground pl-4 italic mb-2">
                         {children}
@@ -99,40 +103,36 @@ export function MessageBubble({ message, onShowPdf }: MessageBubbleProps) {
                 </ReactMarkdown>
               </div>
             ) : (
-              <p className="text-sm whitespace-pre-wrap break-words">
-                {message.content}
-              </p>
+              <div className="relative">
+                <p className="text-base leading-relaxed whitespace-pre-wrap break-words">
+                  {message.content}
+                </p>
+              </div>
             )}
             
-            <div className="flex items-center justify-between gap-2">
-              <span className={`text-xs ${
-                message.role === 'user' 
-                  ? 'text-primary-foreground/70' 
-                  : 'text-muted-foreground'
-              }`}>
-                {formatTime(message.timestamp)}
-              </span>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={copyToClipboard}
-                className={`h-6 w-6 p-0 ${
-                  message.role === 'user'
-                    ? 'text-primary-foreground/70 hover:text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <Copy className="h-3 w-3" />
-              </Button>
-            </div>
+            {message.role === 'assistant' && (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm text-muted-foreground">
+                  {formatTime(message.timestamp)}
+                </span>
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={copyToClipboard}
+                  className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
           </div>
         </Card>
 
         {/* Sources */}
         {message.sources && message.sources.length > 0 && (
           <div className="space-y-2">
-            <p className="text-xs text-muted-foreground font-medium">
+            <p className="text-sm text-muted-foreground font-medium">
               Sources ({message.sources.length})
             </p>
             <div className="space-y-2">
@@ -143,10 +143,10 @@ export function MessageBubble({ message, onShowPdf }: MessageBubbleProps) {
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge variant="secondary" className="text-sm">
                             Source
                           </Badge>
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="text-sm">
                             Page {source.page}
                           </Badge>
                         </div>
@@ -176,7 +176,7 @@ export function MessageBubble({ message, onShowPdf }: MessageBubbleProps) {
                         {isExpanded ? (
                           <div className="space-y-2">
                             <div className="max-h-48 overflow-y-auto p-3 bg-background rounded border">
-                              <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                              <div className="whitespace-pre-wrap text-base leading-relaxed">
                                 {/* Show first 1000 chars in inline view, full content available in modal */}
                                 {source.content.length > 1000 
                                   ? source.content.substring(0, 1000) + "..."
@@ -211,7 +211,7 @@ export function MessageBubble({ message, onShowPdf }: MessageBubbleProps) {
                           </div>
                         ) : (
                           <div className="space-y-1">
-                            <p className="line-clamp-3 text-sm leading-relaxed">
+                            <p className="line-clamp-1 text-base leading-relaxed">
                               {source.content}
                             </p>
                             <div className="flex justify-between items-center">
