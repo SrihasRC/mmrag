@@ -10,7 +10,7 @@
  * @github: https://github.com/kokonut-labs/kokonutui
  */
 
-import { Paperclip, Send } from "lucide-react";
+import { Paperclip, ArrowUp } from "lucide-react";
 import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -96,7 +96,7 @@ export default function AIMessageInput({ onSendMessage, disabled = false, placeh
 
                     <div className="h-12 bg-black/5 dark:bg-secondary-foreground rounded-b-xl">
                         <div className="absolute left-3 bottom-3 flex items-center gap-2">
-                            <label className="cursor-pointer rounded-lg p-2 bg-black/5 dark:bg-white/5">
+                            <label className="cursor-pointer rounded-lg p-2 ring-2 ring-border hover:bg-background transition-colors">
                                 <input type="file" className="hidden" />
                                 <Paperclip className="w-4 h-4 text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white transition-colors" />
                             </label>
@@ -109,11 +109,11 @@ export default function AIMessageInput({ onSendMessage, disabled = false, placeh
                                 className={cn(
                                     "rounded-lg p-2 transition-colors",
                                     value.trim() && !disabled
-                                        ? "bg-sky-500/15 text-sky-500 hover:bg-sky-500/25"
-                                        : "bg-black/5 dark:bg-white/5 text-black/40 dark:text-white/40 cursor-not-allowed"
+                                        ? "bg-primary text-white hover:bg-primary/75 cursor-pointer"
+                                        : "bg-primary dark:bg-primary text-black/40 dark:text-white/40 cursor-not-allowed"
                                 )}
                             >
-                                <Send className="w-4 h-4" />
+                                <ArrowUp className="w-4 h-4" />
                             </button>
                         </div>
                     </div>

@@ -170,9 +170,6 @@ export function AppSidebar({ onPdfSelect, selectedPdfId }: AppSidebarProps) {
                                 {pdf.status === 'processing' && (
                                   <Loader2 className="h-3 w-3 animate-spin" />
                                 )}
-                                {pdf.status === 'completed' && (
-                                  <div className="h-2 w-2 bg-green-500 rounded-full" />
-                                )}
                               </div>
                             </div>
                           </div>
@@ -184,10 +181,15 @@ export function AppSidebar({ onPdfSelect, selectedPdfId }: AppSidebarProps) {
               </SidebarMenu>
             )}
           </div>
+        {!isCollapsed && (
+          <div className="text-xs text-muted-foreground text-center mt-2">
+            {filteredPdfs.length} document{filteredPdfs.length !== 1 ? 's' : ''}
+          </div>
+        )}
         </ScrollArea>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-border p-4">
+      <SidebarFooter className="border-t border-border p-1">
         {!isCollapsed && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -198,8 +200,8 @@ export function AppSidebar({ onPdfSelect, selectedPdfId }: AppSidebarProps) {
                     <AvatarFallback>U</AvatarFallback>
                   </Avatar>
                   <div className="flex-1 text-left">
-                    <p className="text-sm font-medium">User</p>
-                    <p className="text-xs text-muted-foreground">user@example.com</p>
+                    <p className="text-sm font-medium">Srhs</p>
+                    <p className="text-xs text-muted-foreground">srhs@example.com</p>
                   </div>
                   <MoreHorizontal className="h-4 w-4" />
                 </div>
@@ -221,12 +223,6 @@ export function AppSidebar({ onPdfSelect, selectedPdfId }: AppSidebarProps) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        )}
-        
-        {!isCollapsed && (
-          <div className="text-xs text-muted-foreground text-center mt-2">
-            {filteredPdfs.length} document{filteredPdfs.length !== 1 ? 's' : ''}
-          </div>
         )}
       </SidebarFooter>
     </Sidebar>
