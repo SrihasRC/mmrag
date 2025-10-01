@@ -3,12 +3,13 @@
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Copy, ChevronDown } from "lucide-react"
+import { Copy, ChevronDown, FileText } from "lucide-react"
 import { useState } from "react"
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import type { Message } from "./chat-interface"
+import { SourceTextModal } from "./source-text-modal"
 
 interface CodeComponentProps {
   inline?: boolean
@@ -24,6 +25,12 @@ interface MessageBubbleProps {
 export function MessageBubble({ message, onShowPdf }: MessageBubbleProps) {
   const [copied, setCopied] = useState(false)
   const [expandedSources, setExpandedSources] = useState<Set<number>>(new Set())
+  const [modalSource, setModalSource] = useState<{
+    content: string;
+    pdf_id: string;
+    page: number;
+    filename?: string;
+  } | null>(null)
 
   const copyToClipboard = async () => {
     await navigator.clipboard.writeText(message.content)
@@ -167,13 +174,52 @@ export function MessageBubble({ message, onShowPdf }: MessageBubbleProps) {
                       
                       <div className="text-xs text-muted-foreground">
                         {isExpanded ? (
-                          <div className="whitespace-pre-wrap p-2 bg-background rounded border">
-                            {source.content}
+                          <div className="space-y-2">
+                            <div className="max-h-48 overflow-y-auto p-3 bg-background rounded border">
+                              <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                                {/* Show first 1000 chars in inline view, full content available in modal */}
+                                {source.content.length > 1000 
+                                  ? source.content.substring(0, 1000) + "..."
+                                  : source.content}
+                              </div>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs text-muted-foreground">
+                                {source.content.length} characters
+                              </span>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setModalSource(source)}
+                                  className="text-xs h-6 px-2"
+                                >
+                                  <FileText className="h-3 w-3 mr-1" />
+                                  View Full
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => navigator.clipboard.writeText(source.content)}
+                                  className="text-xs h-6 px-2"
+                                >
+                                  <Copy className="h-3 w-3 mr-1" />
+                                  Copy
+                                </Button>
+                              </div>
+                            </div>
                           </div>
                         ) : (
-                          <p className="line-clamp-2">
-                            {source.content}
-                          </p>
+                          <div className="space-y-1">
+                            <p className="line-clamp-3 text-sm leading-relaxed">
+                              {source.content}
+                            </p>
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs text-muted-foreground">
+                                {source.content.length} chars • Click to expand
+                              </span>
+                            </div>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -188,6 +234,13 @@ export function MessageBubble({ message, onShowPdf }: MessageBubbleProps) {
           <div className="text-xs text-green-600">Copied to clipboard!</div>
         )}
       </div>
+      
+      {/* Source Text Modal */}
+      <SourceTextModal
+        isOpen={modalSource !== null}
+        onClose={() => setModalSource(null)}
+        source={modalSource || { content: '', pdf_id: '', page: 1 }}
+      />
     </div>
   )
 }

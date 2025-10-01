@@ -17,11 +17,11 @@ export class ChatService {
       timestamp: new Date().toISOString(),
     }
     
-    const references: DocumentReference[] = result.sources?.map((source: { pdf_id?: string; metadata?: { pdf_id?: string; page?: number }; content?: string; page_content?: string; similarity_score?: number; page?: number }) => ({
-      documentId: source.pdf_id || source.metadata?.pdf_id || 'unknown',
-      pageNumber: source.page || source.metadata?.page || 1,
-      snippet: source.content || source.page_content || '',
-      relevanceScore: source.similarity_score || 0.5,
+    const references: DocumentReference[] = result.references?.map((ref: { documentId?: string; pageNumber?: number; snippet?: string; relevanceScore?: number }) => ({
+      documentId: ref.documentId || 'unknown',
+      pageNumber: ref.pageNumber || 1,
+      snippet: ref.snippet || '',
+      relevanceScore: ref.relevanceScore || 0.5,
     })) || []
     
     return {
