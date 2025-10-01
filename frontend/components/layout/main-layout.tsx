@@ -4,7 +4,7 @@ import { useState } from "react"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "./app-sidebar"
 import { ChatInterface } from "@/components/chat/chat-interface"
-import { PDFViewer } from "@/components/pdf/pdf-viewer"
+import { PDFViewer } from "@/components/pdf/pdf-viewer-simple"
 
 export function MainLayout() {
   const [selectedPdfId, setSelectedPdfId] = useState<string | null>(null)

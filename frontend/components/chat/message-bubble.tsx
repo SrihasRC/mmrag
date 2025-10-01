@@ -3,7 +3,7 @@
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Copy, ExternalLink } from "lucide-react"
+import { Copy, ChevronDown } from "lucide-react"
 import { useState } from "react"
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -23,11 +23,22 @@ interface MessageBubbleProps {
 
 export function MessageBubble({ message, onShowPdf }: MessageBubbleProps) {
   const [copied, setCopied] = useState(false)
+  const [expandedSources, setExpandedSources] = useState<Set<number>>(new Set())
 
   const copyToClipboard = async () => {
     await navigator.clipboard.writeText(message.content)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  const toggleSourceExpansion = (index: number) => {
+    const newExpanded = new Set(expandedSources)
+    if (newExpanded.has(index)) {
+      newExpanded.delete(index)
+    } else {
+      newExpanded.add(index)
+    }
+    setExpandedSources(newExpanded)
   }
 
   const formatTime = (date: Date) => {
@@ -118,38 +129,57 @@ export function MessageBubble({ message, onShowPdf }: MessageBubbleProps) {
               Sources ({message.sources.length})
             </p>
             <div className="space-y-2">
-              {message.sources.map((source, index) => (
-                <Card key={index} className="p-3 bg-muted/50">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-foreground">
-                          {source.filename}
-                        </span>
-                        <Badge variant="secondary" className="text-xs">
-                          Page {source.page}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          {Math.round(source.similarity_score * 100)}% match
-                        </Badge>
+              {message.sources.map((source, index) => {
+                const isExpanded = expandedSources.has(index)
+                return (
+                  <Card key={index} className="p-3 bg-muted/50">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="text-xs">
+                            Source
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            Page {source.page}
+                          </Badge>
+                        </div>
+                        
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleSourceExpansion(index)}
+                            className="h-6 w-6 p-0"
+                            title={isExpanded ? "Show less" : "Show full text"}
+                          >
+                            <ChevronDown className={`h-3 w-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onShowPdf(source.pdf_id)}
+                            className="text-xs px-2 h-6"
+                          >
+                            Show PDF
+                          </Button>
+                        </div>
                       </div>
                       
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onShowPdf(source.pdf_id)}
-                        className="h-6 w-6 p-0"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                      </Button>
+                      <div className="text-xs text-muted-foreground">
+                        {isExpanded ? (
+                          <div className="whitespace-pre-wrap p-2 bg-background rounded border">
+                            {source.content}
+                          </div>
+                        ) : (
+                          <p className="line-clamp-2">
+                            {source.content}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    
-                    <p className="text-xs text-muted-foreground line-clamp-2">
-                      {source.content}
-                    </p>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                )
+              })}
             </div>
           </div>
         )}

@@ -84,30 +84,7 @@ export function ChatInterface({ selectedPdfId, onShowPdf }: ChatInterfaceProps) 
     }
   }
 
-  const clearChat = () => {
-    setMessages([])
-  }
-
-  const exportChat = () => {
-    const chatData = {
-      messages,
-      exportedAt: new Date().toISOString(),
-      selectedPdf: selectedPdfId
-    }
-    
-    const blob = new Blob([JSON.stringify(chatData, null, 2)], {
-      type: 'application/json'
-    })
-    
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `chat-export-${new Date().toISOString().split('T')[0]}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  }
+  // Removed unused clearChat and exportChat functions
 
   return (
     <div className="flex h-screen overflow-auto flex-col bg-background w-full">

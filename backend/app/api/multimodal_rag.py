@@ -1,7 +1,10 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Query
+from fastapi.responses import FileResponse
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel
 import logging
+import os
+from pathlib import Path
 
 from app.services.multimodal_rag import multimodal_rag_service
 from app.services.content_storage import content_storage
@@ -283,6 +286,37 @@ async def debug_pdf_content(pdf_id: str):
     except Exception as e:
         logger.error(f"Error in debug endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Debug failed: {str(e)}")
+
+
+@router.get("/pdf/{pdf_id}/file")
+async def get_pdf_file(pdf_id: str):
+    """Serve the original PDF file for viewing in browser."""
+    try:
+        # Construct file path - PDF ID is the UUID used as filename
+        storage_path = Path("./storage/uploads")
+        pdf_file_path = storage_path / f"{pdf_id}.pdf"
+        
+        # Check if file exists
+        if not pdf_file_path.exists():
+            logger.error(f"PDF file not found: {pdf_file_path}")
+            raise HTTPException(status_code=404, detail=f"PDF file not found for ID: {pdf_id}")
+        
+        # Return file response with proper headers for PDF viewing
+        return FileResponse(
+            path=str(pdf_file_path),
+            media_type="application/pdf",
+            filename=f"{pdf_id}.pdf",
+            headers={
+                "Content-Disposition": "inline",  # This allows viewing in browser instead of download
+                "Cache-Control": "no-cache"
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error serving PDF file {pdf_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error serving PDF file: {str(e)}")
 
 
 @router.get("/health")
