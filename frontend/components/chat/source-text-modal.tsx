@@ -130,7 +130,7 @@ export function SourceTextModal({ isOpen, onClose, source }: SourceTextModalProp
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-      <Card className="w-full max-w-4xl h-[80vh] flex flex-col bg-background shadow-2xl">
+      <Card className="w-full max-w-4xl h-[80vh] flex flex-col bg-background shadow-2xl py-0 gap-0">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
           <div className="flex items-center gap-2">
