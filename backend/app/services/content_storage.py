@@ -159,9 +159,12 @@ class ContentStorageService:
             }
             
             # Save metadata
+            file_metadata = processing_result.get("file_metadata", {})
             metadata = {
                 "pdf_id": pdf_id,
-                "original_filename": processing_result.get("file_path", ""),
+                "original_filename": file_metadata.get("original_filename", processing_result.get("file_path", "")),
+                "file_size": file_metadata.get("file_size", 0),
+                "upload_date": file_metadata.get("upload_date", processing_result.get("processing_timestamp", "")),
                 "processing_summary": processing_result.get("summary", {}),
                 "saved_files": saved_files,
                 "total_files_saved": sum(len(files) for files in saved_files.values())
@@ -202,6 +205,9 @@ class ContentStorageService:
         content = {
             "pdf_id": pdf_id,
             "metadata": metadata,
+            "original_filename": metadata.get("original_filename", f"Document {pdf_id[:8]}"),
+            "file_size": metadata.get("file_size", 0),
+            "upload_date": metadata.get("upload_date", ""),
             "text_files": list((pdf_folder / "texts").glob("*.txt")) if (pdf_folder / "texts").exists() else [],
             "table_files": list((pdf_folder / "tables").glob("*.html")) if (pdf_folder / "tables").exists() else [],
             "image_files": list((pdf_folder / "images").glob("*.jpg")) if (pdf_folder / "images").exists() else [],
