@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Sidebar,
   SidebarContent,
@@ -15,18 +15,17 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { 
-  FileText, 
-  Search, 
   MoreHorizontal,
-  Loader2,
   Settings,
   LogOut,
   User,
   PanelLeftClose,
   PanelLeft,
+  Plus,
+  MessageCircle,
+  Trash2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,48 +34,71 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { PDFUpload } from "@/components/pdf/pdf-upload"
-import { pdfService } from "@/lib/services/pdf-service"
-import { useApi } from "@/hooks/use-api"
 
 // Use PDFDocument type from API instead of local interface
 
+import type { Conversation, ConversationSummary } from "@/lib/types/conversation"
+import { conversationManager } from "@/lib/services/conversation-manager"
+
 interface AppSidebarProps {
-  onPdfSelect: (pdfId: string | null) => void
-  selectedPdfId: string | null
+  currentConversation?: Conversation | null
+  onConversationSelect?: (conversation: Conversation) => void
+  onNewChat?: () => void
 }
 
-export function AppSidebar({ onPdfSelect, selectedPdfId }: AppSidebarProps) {
+export function AppSidebar({ 
+  currentConversation,
+  onConversationSelect,
+  onNewChat
+}: AppSidebarProps = {}) {
   const { state, toggleSidebar } = useSidebar()
-  const [searchQuery, setSearchQuery] = useState("")
+  const [conversations, setConversations] = useState<ConversationSummary[]>([])
   const isCollapsed = state === "collapsed"
 
-  const {
-    data: pdfs = [],
-    loading: isLoadingPdfs,
-    execute: fetchPdfs
-  } = useApi(pdfService.getDocuments, true)
+  useEffect(() => {
+    loadConversations()
+  }, [])
 
-  const handlePdfUpload = () => {
-    fetchPdfs()
+  // Refresh conversations when currentConversation changes (new conversation created)
+  useEffect(() => {
+    if (currentConversation) {
+      loadConversations()
+    }
+  }, [currentConversation])
+
+  const loadConversations = () => {
+    const allConversations = conversationManager.getAllConversations()
+    setConversations(allConversations.sort((a, b) => 
+      new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+    ))
   }
 
-  const filteredPdfs = (pdfs || []).filter(pdf => 
-    pdf.filename.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const handleConversationClick = (conversationId: string) => {
+    const conversation = conversationManager.getConversation(conversationId)
+    if (conversation) {
+      onConversationSelect?.(conversation)
+    }
+  }
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes'
-    const k = 1024
-    const sizes = ['Bytes', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  const handleDeleteConversation = (conversationId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    conversationManager.deleteConversation(conversationId)
+    loadConversations()
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffTime = Math.abs(now.getTime() - date.getTime())
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    
+    if (diffDays === 1) return 'Today'
+    if (diffDays === 2) return 'Yesterday'
+    if (diffDays <= 7) return `${diffDays - 1} days ago`
+    
+    return date.toLocaleDateString('en-US', {
       month: 'short',
-      day: 'numeric',
-      year: 'numeric'
+      day: 'numeric'
     })
   }
 
@@ -107,18 +129,16 @@ export function AppSidebar({ onPdfSelect, selectedPdfId }: AppSidebarProps) {
       <SidebarContent>
         {!isCollapsed && (
           <div className="p-4 space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search documents..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-
-            {/* Upload Area */}
-            <PDFUpload onUploadComplete={handlePdfUpload} />
+            <Button
+              onClick={onNewChat}
+              className="w-full"
+              size="sm"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Chat
+            </Button>
+            
+            <PDFUpload onUploadComplete={() => {}} />
           </div>
         )}
 
@@ -126,51 +146,64 @@ export function AppSidebar({ onPdfSelect, selectedPdfId }: AppSidebarProps) {
 
         <ScrollArea className="flex-1">
           <div className="p-1">
-            {isLoadingPdfs ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin" />
-              </div>
-            ) : filteredPdfs.length === 0 ? (
+            {conversations.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
-                <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+                <MessageCircle className="h-12 w-12 text-muted-foreground mb-4" />
                 {!isCollapsed && (
                   <div>
-                    <p className="text-sm font-medium">No documents yet</p>
+                    <p className="text-sm font-medium">No conversations yet</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Upload a PDF to get started
+                      Start a new chat to get going
                     </p>
                   </div>
                 )}
               </div>
             ) : (
               <SidebarMenu>
-                {filteredPdfs.map((pdf) => (
-                  <SidebarMenuItem key={pdf.id}>
+                {conversations.map((conv) => (
+                  <SidebarMenuItem key={conv.id}>
                     <SidebarMenuButton
-                      onClick={() => onPdfSelect(pdf.id)}
-                      isActive={selectedPdfId === pdf.id}
+                      onClick={() => handleConversationClick(conv.id)}
+                      isActive={currentConversation?.id === conv.id}
                       className="w-full justify-start p-3 h-auto"
                     >
                       <div className="flex items-start space-x-3 w-full min-w-0">
                         <div className="flex-shrink-0">
-                          <FileText className="h-5 w-5 text-blue-500" />
+                          <MessageCircle className="h-4 w-4" />
                         </div>
                         
                         {!isCollapsed && (
                           <div className="flex-1 min-w-0 space-y-1">
                             <div className="flex items-center justify-between">
                               <p className="text-sm font-medium truncate">
-                                {pdf.filename}
+                                {conv.title || conv.pdf_name}
                               </p>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <MoreHorizontal className="h-3 w-3" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={(e) => handleDeleteConversation(conv.id, e)}
+                                    className="text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
                             
                             <div className="flex items-center justify-between text-xs text-muted-foreground">
-                              <span>{formatFileSize(pdf.fileSize)} • {formatDate(pdf.uploadDate)}</span>
-                              <div className="flex items-center space-x-1">
-                                {pdf.status === 'processing' && (
-                                  <Loader2 className="h-3 w-3 animate-spin" />
-                                )}
-                              </div>
+                              <span>{conv.message_count} messages</span>
+                              <span>{formatDate(conv.updated_at)}</span>
                             </div>
                           </div>
                         )}
@@ -183,9 +216,11 @@ export function AppSidebar({ onPdfSelect, selectedPdfId }: AppSidebarProps) {
           </div>
         {!isCollapsed && (
           <div className="text-xs text-muted-foreground text-center mt-2">
-            {filteredPdfs.length} document{filteredPdfs.length !== 1 ? 's' : ''}
+            {conversations.length} conversation{conversations.length !== 1 ? 's' : ''}
           </div>
         )}
+
+
         </ScrollArea>
       </SidebarContent>
 
