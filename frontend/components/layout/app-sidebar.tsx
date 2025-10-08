@@ -162,53 +162,58 @@ export function AppSidebar({
               <SidebarMenu>
                 {conversations.map((conv) => (
                   <SidebarMenuItem key={conv.id}>
-                    <SidebarMenuButton
-                      onClick={() => handleConversationClick(conv.id)}
-                      isActive={currentConversation?.id === conv.id}
-                      className="w-full justify-start p-3 h-auto"
-                    >
-                      <div className="flex items-start space-x-3 w-full min-w-0">
-                        <div className="flex-shrink-0">
-                          <MessageCircle className="h-4 w-4" />
-                        </div>
-                        
-                        {!isCollapsed && (
-                          <div className="flex-1 min-w-0 space-y-1">
-                            <div className="flex items-center justify-between">
-                              <p className="text-sm font-medium truncate">
-                                {conv.title || conv.pdf_name}
-                              </p>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 w-6 p-0"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <MoreHorizontal className="h-3 w-3" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    onClick={(e) => handleDeleteConversation(conv.id, e)}
-                                    className="text-destructive"
-                                  >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                            
-                            <div className="flex items-center justify-between text-xs text-muted-foreground">
-                              <span>{conv.message_count} messages</span>
-                              <span>{formatDate(conv.updated_at)}</span>
-                            </div>
+                    <div className="relative group">
+                      <SidebarMenuButton
+                        onClick={() => handleConversationClick(conv.id)}
+                        isActive={currentConversation?.id === conv.id}
+                        className="w-full justify-start p-3 h-auto pr-8"
+                      >
+                        <div className="flex items-start space-x-3 w-full min-w-0">
+                          <div className="flex-shrink-0">
+                            <MessageCircle className="h-4 w-4" />
                           </div>
-                        )}
-                      </div>
-                    </SidebarMenuButton>
+                          
+                          {!isCollapsed && (
+                            <div className="flex-1 min-w-0 space-y-1">
+                              <div className="flex items-center justify-between">
+                                <p className="text-sm font-medium truncate">
+                                  {conv.title || conv.pdf_name}
+                                </p>
+                              </div>
+                              
+                              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                <span>{conv.message_count} messages</span>
+                                <span>{formatDate(conv.updated_at)}</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </SidebarMenuButton>
+                      
+                      {!isCollapsed && (
+                        <div className="absolute right-2 top-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                className="h-6 w-6 p-0 rounded hover:bg-accent inline-flex items-center justify-center"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <MoreHorizontal className="h-3 w-3" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={(e) => handleDeleteConversation(conv.id, e)}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      )}
+                    </div>
                   </SidebarMenuItem>
                 ))}
               </SidebarMenu>
