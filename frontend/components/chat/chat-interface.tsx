@@ -3,13 +3,14 @@
 import { useState, useRef, useEffect } from "react"
 import { MessageList } from "./message-list"
 import AIMessageInput from "@/components/kokonutui/ai-input-search"
-import { Card, CardContent } from "@/components/ui/card"
-import { FileText } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Plus } from "lucide-react"
 import { chatService } from "@/lib/services/chat-service"
 import { conversationManager } from "@/lib/services/conversation-manager"
 import { pdfService } from "@/lib/services/pdf-service"
 import { useApi } from "@/hooks/use-api"
 import type { Conversation, Message } from "@/lib/types/conversation"
+import { FileSelectionModal } from "./file-selection-modal"
 
 // Re-export Message type for backward compatibility
 export type { Message }
@@ -31,10 +32,10 @@ export function ChatInterface({
 }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const {
-    data: pdfs = [],
     loading: isLoadingPdfs,
   } = useApi(pdfService.getDocuments, true)
 
@@ -59,23 +60,10 @@ export function ChatInterface({
     // Create draft conversation for selected file (not saved until first message)
     const conversation = conversationManager.createDraftConversation(pdfId, pdfName)
     onNewConversation?.(conversation)
+    setIsModalOpen(false)
   }
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes'
-    const k = 1024
-    const sizes = ['Bytes', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-  }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    })
-  }
 
   const handleSendMessage = async (content: string) => {
     if (!currentConversation) return
@@ -180,47 +168,22 @@ export function ChatInterface({
         {/* Input Area */}
         <div className="fixed bottom-0 m-2 space-y-2 bg-background/95 backdrop-blur-sm w-[52rem]">
           {!currentConversation && (
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="text-center text-sm text-muted-foreground">
                 Select a document to start chatting
               </div>
               
-              {/* File List */}
-              {isLoadingPdfs ? (
-                <div className="text-center py-4">
-                  <div className="text-sm text-muted-foreground">Loading documents...</div>
-                </div>
-              ) : pdfs && pdfs.length > 0 ? (
-                <div className="space-y-1 max-h-32 overflow-y-auto">
-                  {pdfs.map((pdf) => (
-                    <Card
-                      key={pdf.id}
-                      className="cursor-pointer transition-colors hover:bg-accent/50 border-0 shadow-sm"
-                      onClick={() => handleFileSelect(pdf.id, pdf.filename)}
-                    >
-                      <CardContent className="p-3">
-                        <div className="flex items-center space-x-3">
-                          <FileText className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">
-                              {pdf.filename}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {formatFileSize(pdf.fileSize)} • {formatDate(pdf.uploadDate)}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-4">
-                  <FileText className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">No documents uploaded yet</p>
-                  <p className="text-xs text-muted-foreground">Upload a PDF to start chatting</p>
-                </div>
-              )}
+              <div className="flex justify-center">
+                <Button 
+                  onClick={() => setIsModalOpen(true)}
+                  variant="outline"
+                  className="flex items-center space-x-2"
+                  disabled={isLoadingPdfs}
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>{isLoadingPdfs ? "Loading..." : "Choose Document"}</span>
+                </Button>
+              </div>
             </div>
           )}
           
@@ -235,6 +198,13 @@ export function ChatInterface({
           />
         </div>
       </div>
+
+      {/* File Selection Modal */}
+      <FileSelectionModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onFileSelect={handleFileSelect}
+      />
     </div>
   )
 }
