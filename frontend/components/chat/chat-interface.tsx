@@ -142,11 +142,11 @@ export function ChatInterface({
   // Removed unused clearChat and exportChat functions
 
   return (
-    <div className="flex h-screen overflow-auto flex-col bg-background w-full">
+    <div className="flex h-full flex-col w-full relative">
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col max-w-[52rem] mx-auto w-full">
-        {/* Messages Area */}
-        <div className="flex-1 overflow-hidden py-6 w-full">
+      <div className="flex-1 flex flex-col max-w-[52rem] mx-auto w-full min-h-0">
+        {/* Messages Area - with internal scrolling */}
+        <div className="flex-1 overflow-y-auto py-6 mb-24 w-full">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
               <div className="space-y-2">
@@ -178,7 +178,7 @@ export function ChatInterface({
         </div>
 
         {/* Input Area */}
-        <div className="sticky bottom-0 p-2 space-y-2">
+        <div className="fixed bottom-0 m-2 space-y-2 bg-background/95 backdrop-blur-sm w-[52rem]">
           {!currentConversation && (
             <div className="space-y-2">
               <div className="text-center text-sm text-muted-foreground">
