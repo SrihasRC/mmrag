@@ -90,20 +90,30 @@ class MultimodalRAGService:
             question = inputs["question"]
             context = inputs["context"]
             
-            # Build context from retrieved documents
+            # Build context from retrieved documents with metadata
             context_text = ""
+            document_sources = set()
             if context:
                 for i, doc in enumerate(context):
-                    context_text += f"Document {i+1}:\n{doc.page_content}\n\n"
+                    pdf_id = doc.metadata.get("pdf_id", "unknown")
+                    document_sources.add(pdf_id)
+                    context_text += f"Document {i+1} (Source: {pdf_id}):\n{doc.page_content}\n\n"
+            
+            # Create system message that's aware of multiple documents
+            num_sources = len(document_sources)
+            system_content = (
+                "You are a helpful assistant that answers questions based on the provided context. "
+                f"You have been provided with information from {num_sources} different source document(s). "
+                "When answering, consider information from ALL provided documents. "
+                "If comparing or contrasting information, explicitly reference the different sources. "
+                "Use the context to provide accurate and detailed answers. If the context doesn't "
+                "contain enough information to answer the question, say so."
+            )
             
             messages = [
-                SystemMessage(
-                    content="You are a helpful assistant that answers questions based on the provided context. "
-                           "Use the context to provide accurate and detailed answers. If the context doesn't "
-                           "contain enough information to answer the question, say so."
-                ),
+                SystemMessage(content=system_content),
                 HumanMessage(
-                    content=f"Context:\n{context_text}\n\nQuestion: {question}"
+                    content=f"Context from {num_sources} document source(s):\n\n{context_text}\n\nQuestion: {question}"
                 )
             ]
             return messages
@@ -152,6 +162,54 @@ class MultimodalRAGService:
             return True
         return False
     
+    async def _enhance_context_for_multi_pdfs(self, retrieved_docs: List, question: str, pdf_ids: Optional[List[str]] = None) -> List:
+        """Enhance context for multiple PDFs by ensuring relevant content from all selected documents."""
+        if not retrieved_docs:
+            return retrieved_docs
+        
+        try:
+            enhanced_docs = list(retrieved_docs)
+            
+            if pdf_ids and len(pdf_ids) > 1:
+                # Check which PDFs are represented in the retrieved docs
+                represented_pdfs = {doc.metadata.get("pdf_id") for doc in retrieved_docs}
+                missing_pdfs = set(pdf_ids) - represented_pdfs
+                
+                # For PDFs that don't have any retrieved documents, get some relevant content
+                for missing_pdf_id in missing_pdfs:
+                    try:
+                        # Get relevant documents from this PDF using the same query
+                        additional_docs = await vector_store_service.similarity_search(
+                            query=question,
+                            k=3,  # Get a few relevant documents from this PDF
+                            filter_metadata={"pdf_id": missing_pdf_id}
+                        )
+                        
+                        if additional_docs:
+                            logger.info(f"Adding {len(additional_docs)} relevant documents from missing PDF {missing_pdf_id}")
+                            enhanced_docs.extend(additional_docs)
+                        else:
+                            # If no relevant docs found with the query, get the first few chunks
+                            # This ensures we have some content from each selected PDF
+                            fallback_docs = await vector_store_service.similarity_search(
+                                query="",  # Empty query
+                                k=2,  # Just get a couple of documents
+                                filter_metadata={"pdf_id": missing_pdf_id}
+                            )
+                            if fallback_docs:
+                                logger.info(f"Adding {len(fallback_docs)} fallback documents from PDF {missing_pdf_id}")
+                                enhanced_docs.extend(fallback_docs)
+                                
+                    except Exception as e:
+                        logger.warning(f"Could not enhance context for missing PDF {missing_pdf_id}: {str(e)}")
+                        continue
+            
+            return enhanced_docs
+            
+        except Exception as e:
+            logger.error(f"Error enhancing context for multiple PDFs: {str(e)}")
+            return retrieved_docs
+
     async def _enhance_context_for_query(self, retrieved_docs: List, question: str, pdf_id: Optional[str] = None) -> List:
         """Enhance context by adding related chunks for better coherence."""
         if not retrieved_docs:
@@ -426,30 +484,53 @@ class MultimodalRAGService:
             logger.error(f"Error creating embeddings for PDF {pdf_id}: {str(e)}")
             raise
     
-    async def query_rag(self, question: str, pdf_id: Optional[str] = None, top_k: int = 5) -> Dict[str, Any]:
-        """Query the RAG system with enhanced document-level context awareness."""
+    async def query_rag(self, question: str, pdf_ids: Optional[List[str]] = None, pdf_id: Optional[str] = None, top_k: int = 5) -> Dict[str, Any]:
+        """Query the RAG system with enhanced document-level context awareness. Supports multiple PDFs."""
         try:
             logger.info(f"Processing RAG query: {question}")
             
+            # Handle backward compatibility and multiple PDF IDs
+            target_pdf_ids = pdf_ids or ([pdf_id] if pdf_id else None)
+            
             # Retrieve relevant documents
-            filter_metadata = {"pdf_id": pdf_id} if pdf_id else None
-            retrieved_docs = await vector_store_service.similarity_search(
-                query=question,
-                k=top_k,
-                filter_metadata=filter_metadata
-            )
+            filter_metadata = None
+            if target_pdf_ids:
+                if len(target_pdf_ids) == 1:
+                    filter_metadata = {"pdf_id": target_pdf_ids[0]}
+                else:
+                    # For multiple PDFs, ChromaDB uses different syntax
+                    # We'll need to modify the vector store service to handle this
+                    # For now, let's search without filter and filter results later
+                    filter_metadata = None
+            
+            if target_pdf_ids and len(target_pdf_ids) > 1:
+                # For multiple PDFs, search without filter and then filter results
+                all_docs = await vector_store_service.similarity_search(
+                    query=question,
+                    k=top_k * 3,  # Get more results to ensure we have enough after filtering
+                    filter_metadata=None
+                )
+                # Filter results to only include documents from target PDFs
+                retrieved_docs = [doc for doc in all_docs if doc.metadata.get("pdf_id") in target_pdf_ids][:top_k]
+            else:
+                # Single PDF or no filter
+                retrieved_docs = await vector_store_service.similarity_search(
+                    query=question,
+                    k=top_k,
+                    filter_metadata=filter_metadata
+                )
             
             if not retrieved_docs:
                 return {
                     "question": question,
                     "answer": "I couldn't find any relevant information to answer your question.",
                     "sources": [],
-                    "pdf_id": pdf_id,
+                    "pdf_id": target_pdf_ids[0] if target_pdf_ids else None,
                     "retrieved_docs_count": 0
                 }
             
             # For short documents or resumes, get additional context
-            enhanced_context = await self._enhance_context_for_query(retrieved_docs, question, pdf_id)
+            enhanced_context = await self._enhance_context_for_multi_pdfs(retrieved_docs, question, target_pdf_ids)
             
             # Generate answer using QA chain with enhanced context
             qa_input = {
@@ -488,7 +569,7 @@ class MultimodalRAGService:
                 "answer": answer,
                 "references": references,  # Frontend expects this
                 "sources": [],  # Keep for backward compatibility
-                "pdf_id": pdf_id,
+                "pdf_id": target_pdf_ids[0] if target_pdf_ids else None,
                 "retrieved_docs_count": len(retrieved_docs)
             }
             

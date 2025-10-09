@@ -18,7 +18,8 @@ router = APIRouter(prefix="/api/v1/rag", tags=["Multimodal RAG"])
 # Pydantic models for request/response
 class QueryRequest(BaseModel):
     question: str
-    pdf_id: Optional[str] = None
+    pdf_id: Optional[str] = None  # Keep for backward compatibility
+    pdf_ids: Optional[List[str]] = None  # New field for multiple PDFs
     top_k: int = 5
 
 
@@ -115,13 +116,21 @@ async def query_rag_system(query_request: QueryRequest):
     
     Searches through processed PDF content (text, tables, images) and returns
     an answer based on the most relevant retrieved documents.
+    Supports both single PDF (pdf_id) and multiple PDFs (pdf_ids).
     """
     try:
         logger.info(f"Received RAG query: {query_request.question}")
         
+        # Handle both single and multiple PDF IDs
+        pdf_ids = None
+        if query_request.pdf_ids:
+            pdf_ids = query_request.pdf_ids
+        elif query_request.pdf_id:
+            pdf_ids = [query_request.pdf_id]
+        
         result = await multimodal_rag_service.query_rag(
             question=query_request.question,
-            pdf_id=query_request.pdf_id,
+            pdf_ids=pdf_ids,
             top_k=query_request.top_k
         )
         
