@@ -104,7 +104,7 @@ export const api = {
   },
 
   // Query RAG system - matches backend: QueryRequest model
-  async queryRAG(question: string, pdf_id?: string, top_k: number = 5): Promise<{
+  async queryRAG(question: string, pdf_id?: string, pdf_ids?: string[], top_k: number = 5): Promise<{
     question: string
     answer: string
     references: DocumentReference[]
@@ -115,6 +115,7 @@ export const api = {
     const payload = {
       question,
       pdf_id: pdf_id || null,
+      pdf_ids: pdf_ids || null,
       top_k
     }
     
@@ -232,7 +233,8 @@ export const apiClient = {
     if (endpoint === '/api/v1/rag/query') {
       const result = await api.queryRAG(
         data.question as string, 
-        data.pdf_id as string | undefined, 
+        data.pdf_id as string | undefined,
+        data.pdf_ids as string[] | undefined,
         data.top_k as number | undefined
       )
       return { data: result as T }

@@ -33,6 +33,7 @@ export function ChatInterface({
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedPdfIds, setSelectedPdfIds] = useState<string[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const {
@@ -51,14 +52,29 @@ export function ChatInterface({
   useEffect(() => {
     if (currentConversation) {
       setMessages(currentConversation.messages)
+      // Don't clear selectedPdfIds here - they should persist for the active conversation
     } else {
       setMessages([])
+      // Only clear selectedPdfIds when user explicitly clears conversation
+      setSelectedPdfIds([])
     }
   }, [currentConversation])
 
-  const handleFileSelect = (pdfId: string, pdfName: string) => {
-    // Create draft conversation for selected file (not saved until first message)
-    const conversation = conversationManager.createDraftConversation(pdfId, pdfName)
+  const handleFileSelect = (selectedFiles: Array<{ pdfId: string, pdfName: string }>) => {
+    if (selectedFiles.length === 0) return
+    
+    // Store the selected PDF IDs for use in chat service
+    const pdfIds = selectedFiles.map(f => f.pdfId)
+    setSelectedPdfIds(pdfIds)
+    
+    // Create a conversation with a name representing all selected files
+    const firstFile = selectedFiles[0]
+    const conversationName = selectedFiles.length === 1
+      ? firstFile.pdfName
+      : `${selectedFiles.length} documents (${firstFile.pdfName}${selectedFiles.length > 1 ? ', ...' : ''})`
+    
+    const conversation = conversationManager.createDraftConversation(firstFile.pdfId, conversationName)
+    
     onNewConversation?.(conversation)
     setIsModalOpen(false)
   }
@@ -83,10 +99,10 @@ export function ChatInterface({
     setIsLoading(true)
 
     try {
-      // Use the real chat service
+      // Use the real chat service with multiple document IDs
       const response = await chatService.sendMessage({
         message: content,
-        documentIds: selectedPdfId ? [selectedPdfId] : undefined
+        documentIds: selectedPdfIds.length > 0 ? selectedPdfIds : undefined
       })
 
       const assistantMessage: Message = {
@@ -170,7 +186,7 @@ export function ChatInterface({
           {!currentConversation && (
             <div className="space-y-3">
               <div className="text-center text-sm text-muted-foreground">
-                Select a document to start chatting
+                Select documents to start chatting
               </div>
               
               <div className="flex justify-center">
@@ -181,7 +197,7 @@ export function ChatInterface({
                   disabled={isLoadingPdfs}
                 >
                   <Plus className="h-4 w-4" />
-                  <span>{isLoadingPdfs ? "Loading..." : "Choose Document"}</span>
+                  <span>{isLoadingPdfs ? "Loading..." : "Choose Documents"}</span>
                 </Button>
               </div>
             </div>
@@ -193,7 +209,7 @@ export function ChatInterface({
             placeholder={
               currentConversation
                 ? `Ask a question about ${currentConversation.pdf_name}...`
-                : "Select a document above to start chatting"
+                : "Select documents above to start chatting"
             }
           />
         </div>

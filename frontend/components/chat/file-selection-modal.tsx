@@ -5,39 +5,45 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { FileText, Loader2, X } from "lucide-react"
+import { FileText, Loader2, X, Check } from "lucide-react"
 import { pdfService } from "@/lib/services/pdf-service"
 import { useApi } from "@/hooks/use-api"
 
 interface FileSelectionModalProps {
   isOpen: boolean
   onClose: () => void
-  onFileSelect: (pdfId: string, pdfName: string) => void
+  onFileSelect: (selectedFiles: Array<{ pdfId: string, pdfName: string }>) => void
 }
 
 export function FileSelectionModal({ isOpen, onClose, onFileSelect }: FileSelectionModalProps) {
-  const [selectedPdfId, setSelectedPdfId] = useState<string>("")
+  const [selectedPdfIds, setSelectedPdfIds] = useState<string[]>([])
 
   const {
     data: pdfs = [],
     loading: isLoadingPdfs,
   } = useApi(pdfService.getDocuments, true)
 
-  const handleFileSelect = (pdfId: string) => {
-    setSelectedPdfId(pdfId)
+  const handleFileToggle = (pdfId: string) => {
+    setSelectedPdfIds(prev => 
+      prev.includes(pdfId) 
+        ? prev.filter(id => id !== pdfId)
+        : [...prev, pdfId]
+    )
   }
 
   const handleConfirm = () => {
-    const selectedPdf = pdfs?.find(pdf => pdf.id === selectedPdfId)
-    if (selectedPdf) {
-      onFileSelect(selectedPdf.id, selectedPdf.filename)
+    const selectedFiles = pdfs?.filter(pdf => selectedPdfIds.includes(pdf.id))
+      .map(pdf => ({ pdfId: pdf.id, pdfName: pdf.filename })) || []
+    
+    if (selectedFiles.length > 0) {
+      onFileSelect(selectedFiles)
       handleClose()
     }
   }
 
   const handleClose = () => {
     onClose()
-    setSelectedPdfId("")
+    setSelectedPdfIds([])
   }
 
   const formatFileSize = (bytes: number) => {
@@ -71,8 +77,8 @@ export function FileSelectionModal({ isOpen, onClose, onFileSelect }: FileSelect
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
           <div>
-            <h2 className="text-lg font-semibold">Select a Document</h2>
-            <p className="text-sm text-muted-foreground">Choose a PDF document to start chatting</p>
+            <h2 className="text-lg font-semibold">Select Documents</h2>
+            <p className="text-sm text-muted-foreground">Choose one or more PDF documents to start chatting</p>
           </div>
           <Button
             variant="ghost"
@@ -98,14 +104,26 @@ export function FileSelectionModal({ isOpen, onClose, onFileSelect }: FileSelect
                   <Card
                     key={pdf.id}
                     className={`cursor-pointer transition-all hover:bg-accent/50 py-0 ${
-                      selectedPdfId === pdf.id 
+                      selectedPdfIds.includes(pdf.id) 
                         ? 'border-primary bg-accent/30 ring-1 ring-primary/20' 
                         : 'border-border hover:border-accent-foreground/20'
                     }`}
-                    onClick={() => handleFileSelect(pdf.id)}
+                    onClick={() => handleFileToggle(pdf.id)}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-center space-x-4">
+                        <div className="flex-shrink-0">
+                          <div className={`w-5 h-5 border-2 rounded flex items-center justify-center transition-colors ${
+                            selectedPdfIds.includes(pdf.id)
+                              ? 'bg-primary border-primary'
+                              : 'border-muted-foreground hover:border-primary'
+                          }`}>
+                            {selectedPdfIds.includes(pdf.id) && (
+                              <Check className="h-3 w-3 text-white" />
+                            )}
+                          </div>
+                        </div>
+                        
                         <div className="flex-shrink-0">
                           <FileText className="h-10 w-10 text-blue-500" />
                         </div>
@@ -149,7 +167,9 @@ export function FileSelectionModal({ isOpen, onClose, onFileSelect }: FileSelect
         {pdfs && pdfs.length > 0 && (
           <div className="flex items-center justify-between p-6 border-t bg-muted/20">
             <div className="text-sm text-muted-foreground">
-              {selectedPdfId ? "Document selected" : "Select a document to continue"}
+              {selectedPdfIds.length > 0 
+                ? `${selectedPdfIds.length} document${selectedPdfIds.length === 1 ? '' : 's'} selected` 
+                : "Select documents to continue"}
             </div>
             <div className="flex space-x-3">
               <Button variant="outline" onClick={handleClose}>
@@ -157,7 +177,7 @@ export function FileSelectionModal({ isOpen, onClose, onFileSelect }: FileSelect
               </Button>
               <Button 
                 onClick={handleConfirm}
-                disabled={!selectedPdfId || isLoadingPdfs}
+                disabled={selectedPdfIds.length === 0 || isLoadingPdfs}
               >
                 Start Chat
               </Button>

@@ -5,7 +5,8 @@ export class ChatService {
   static async sendMessage(request: ChatRequest): Promise<ChatResponse> {
     const result = await api.queryRAG(
       request.message,
-      request.documentIds?.[0],
+      undefined,  // pdf_id for backward compatibility
+      request.documentIds,  // pdf_ids for multi-document support
       5
     )
     
