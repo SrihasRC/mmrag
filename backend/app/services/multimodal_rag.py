@@ -31,6 +31,8 @@ class MultimodalRAGService:
         self.text_summarizer = self._create_text_summarizer()
         self.image_summarizer = self._create_image_summarizer()
         self.qa_chain = self._create_qa_chain()
+        self._last_groq_request = 0
+        self._last_gemini_request = 0
     
     def _create_text_summarizer(self):
         """Create chain for summarizing text and tables with detail preservation."""
@@ -55,6 +57,36 @@ class MultimodalRAGService:
         prompt = ChatPromptTemplate.from_template(prompt_text)
         model = ChatGroq(temperature=0.1, model="llama-3.1-8b-instant")  # Lower temperature for consistency
         return prompt | model | StrOutputParser()
+    
+    async def _rate_limit_groq(self, min_delay: float = 2.0):
+        """Ensure minimum delay between Groq API calls."""
+        import time
+        import asyncio
+        
+        current_time = time.time()
+        time_since_last = current_time - self._last_groq_request
+        
+        if time_since_last < min_delay:
+            delay = min_delay - time_since_last
+            logger.info(f"Rate limiting: waiting {delay:.1f}s before next Groq request")
+            await asyncio.sleep(delay)
+        
+        self._last_groq_request = time.time()
+    
+    async def _rate_limit_gemini(self, min_delay: float = 3.0):
+        """Ensure minimum delay between Gemini API calls."""
+        import time
+        import asyncio
+        
+        current_time = time.time()
+        time_since_last = current_time - self._last_gemini_request
+        
+        if time_since_last < min_delay:
+            delay = min_delay - time_since_last
+            logger.info(f"Rate limiting: waiting {delay:.1f}s before next Gemini request")
+            await asyncio.sleep(delay)
+        
+        self._last_gemini_request = time.time()
     
     def _create_image_summarizer(self):
         """Create chain for summarizing images using Gemini 2.5 Flash with context."""
@@ -382,6 +414,8 @@ class MultimodalRAGService:
     
     async def _summarize_text_batch(self, text_list: List[str], doc_type: str = "general", doc_context: str = "") -> List[str]:
         """Summarize a batch of text/table content with document context."""
+        import asyncio
+        
         try:
             # Create context-aware inputs
             context_inputs = [
@@ -393,14 +427,34 @@ class MultimodalRAGService:
                 for text in text_list
             ]
             
-            summaries = self.text_summarizer.batch(context_inputs, {"max_concurrency": 2})
+            # Use sequential processing with proper rate limiting
+            summaries = []
+            for i, input_data in enumerate(context_inputs):
+                try:
+                    # Rate limit Groq requests
+                    await self._rate_limit_groq()
+                    
+                    summary = await self.text_summarizer.ainvoke(input_data)
+                    summaries.append(summary)
+                    logger.info(f"Completed text summarization {i+1}/{len(context_inputs)}")
+                    
+                except Exception as e:
+                    logger.warning(f"Failed to summarize chunk {i+1}: {str(e)}")
+                    summaries.append(f"Summarization failed for chunk {i+1}")
+            
             return summaries
+            
         except Exception as e:
             logger.error(f"Error in context-aware text summarization: {str(e)}")
             # Fallback to simple summarization without context
             try:
                 simple_inputs = [{"element": text, "doc_type": doc_type, "doc_context": ""} for text in text_list]
-                return self.text_summarizer.batch(simple_inputs, {"max_concurrency": 2})
+                summaries = []
+                for i, input_data in enumerate(simple_inputs):
+                    await self._rate_limit_groq()
+                    summary = await self.text_summarizer.ainvoke(input_data)
+                    summaries.append(summary)
+                return summaries
             except:
                 return [f"Error summarizing content: {str(e)}" for _ in text_list]
     
@@ -416,16 +470,35 @@ class MultimodalRAGService:
             Focus on relevant details that would help answer questions about this document.
             """
             
-            # Format images with context for the chain
-            formatted_images = [{"image": img, "context": context_prompt} for img in images_base64]
-            summaries = self.image_summarizer.batch(formatted_images, {"max_concurrency": 1})  # Slower for better quality
+            # Process images sequentially with proper rate limiting
+            summaries = []
+            for i, img in enumerate(images_base64):
+                try:
+                    # Rate limit Gemini requests  
+                    await self._rate_limit_gemini()
+                    
+                    formatted_input = {"image": img, "context": context_prompt}
+                    summary = await self.image_summarizer.ainvoke(formatted_input)
+                    summaries.append(summary)
+                    logger.info(f"Completed image summarization {i+1}/{len(images_base64)}")
+                    
+                except Exception as e:
+                    logger.warning(f"Failed to summarize image {i+1}: {str(e)}")
+                    summaries.append(f"Image summarization failed for image {i+1}")
+            
             return summaries
+            
         except Exception as e:
             logger.error(f"Error in context-aware image summarization: {str(e)}")
             # Fallback to simple image summarization
             try:
-                simple_images = [{"image": img} for img in images_base64]
-                return self.image_summarizer.batch(simple_images, {"max_concurrency": 2})
+                summaries = []
+                for i, img in enumerate(images_base64):
+                    await self._rate_limit_gemini()
+                    simple_input = {"image": img}
+                    summary = await self.image_summarizer.ainvoke(simple_input)
+                    summaries.append(summary)
+                return summaries
             except:
                 return [f"Error summarizing image: {str(e)}" for _ in images_base64]
     
