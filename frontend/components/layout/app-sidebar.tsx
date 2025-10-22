@@ -175,7 +175,7 @@ export function AppSidebar({
                           
                           {!isCollapsed && (
                             <div className="flex-1 min-w-0 space-y-1">
-                              <div className="flex items-center justify-between">
+                              <div className="flex items-center justify-between max-w-48">
                                 <p className="text-sm font-medium truncate">
                                   {conv.title || conv.pdf_name}
                                 </p>
