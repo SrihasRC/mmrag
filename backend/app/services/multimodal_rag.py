@@ -3,6 +3,7 @@ import uuid
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 import logging
+import numpy as np
 from fastapi import HTTPException
 
 from langchain_groq import ChatGroq
@@ -663,6 +664,23 @@ class MultimodalRAGService:
                 "pdf_id": target_pdf_ids[0] if target_pdf_ids else None,
                 "retrieved_docs_count": len(retrieved_docs)
             }
+            
+            # Provide feedback to adaptive threshold (RL component)
+            # Heuristic: If we got good retrieval (multiple docs with high scores), it's useful
+            if retrieved_docs:
+                avg_score = np.mean([getattr(doc, 'similarity_score', 0.8) for doc in retrieved_docs])
+                chunk_was_useful = avg_score > 0.6 and len(retrieved_docs) >= top_k // 2
+                
+                # Provide feedback to semantic chunker's adaptive threshold
+                try:
+                    from app.services.pdf_processor import pdf_processor
+                    if pdf_processor.semantic_chunker and pdf_processor.semantic_chunker.adaptive_threshold:
+                        pdf_processor.semantic_chunker.provide_feedback(
+                            chunk_was_useful=chunk_was_useful,
+                            retrieval_score=float(avg_score)
+                        )
+                except Exception as e:
+                    logger.debug(f"Could not provide RL feedback: {e}")
             
             logger.info(f"RAG query completed successfully")
             return result
