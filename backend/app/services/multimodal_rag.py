@@ -312,8 +312,20 @@ class MultimodalRAGService:
             logger.warning(f"Error enhancing context: {str(e)}")
             return retrieved_docs  # Fallback to original docs
     
-    async def process_pdf_complete(self, file, save_content: bool = True) -> Dict[str, Any]:
-        """Complete PDF processing pipeline with summarization and vector storage."""
+    async def process_pdf_complete(
+        self, 
+        file, 
+        save_content: bool = True,
+        use_semantic_chunking: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Complete PDF processing pipeline with summarization and vector storage.
+        
+        Args:
+            file: Uploaded PDF file
+            save_content: Whether to save extracted content
+            use_semantic_chunking: Whether to use neural semantic chunking
+        """
         try:
             # Get file metadata before processing
             file_content = await file.read()
@@ -321,8 +333,14 @@ class MultimodalRAGService:
             file_size = len(file_content)
             
             # Step 1: Process PDF and extract elements
-            logger.info(f"Starting complete PDF processing for: {file.filename} ({file_size} bytes)")
-            processing_result = await pdf_processor.process_pdf_file(file)
+            logger.info(
+                f"Starting complete PDF processing for: {file.filename} ({file_size} bytes), "
+                f"semantic_chunking={use_semantic_chunking}"
+            )
+            processing_result = await pdf_processor.process_pdf_file(
+                file,
+                use_semantic_chunking=use_semantic_chunking
+            )
             
             pdf_id = processing_result["file_id"]
             

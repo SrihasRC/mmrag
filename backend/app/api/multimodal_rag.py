@@ -54,7 +54,8 @@ processing_cache = set()
 @router.post("/upload", response_model=UploadResponse)
 async def upload_and_process_pdf(
     file: UploadFile = File(...),
-    save_content: bool = Query(True, description="Whether to save extracted content to storage")
+    save_content: bool = Query(True, description="Whether to save extracted content to storage"),
+    use_semantic_chunking: bool = Query(True, description="Use neural semantic chunking (vs traditional)")
 ):
     """
     Upload and process a PDF file through the complete multimodal RAG pipeline.
@@ -64,6 +65,11 @@ async def upload_and_process_pdf(
     2. Generates summaries for all content types
     3. Saves content to organized folders (optional)
     4. Creates embeddings and stores them in the vector database
+    
+    Args:
+        file: PDF file to process
+        save_content: Whether to save extracted content to storage
+        use_semantic_chunking: Use neural semantic chunking for better coherence (recommended)
     """
     try:
         logger.info(f"Received PDF upload request: {file.filename}")
@@ -93,7 +99,11 @@ async def upload_and_process_pdf(
             processing_cache.add(upload_key)
             
             # Process the PDF through the complete pipeline
-            result = await multimodal_rag_service.process_pdf_complete(file, save_content)
+            result = await multimodal_rag_service.process_pdf_complete(
+                file, 
+                save_content,
+                use_semantic_chunking=use_semantic_chunking
+            )
             
             logger.info(f"Successfully processed PDF: {file.filename} -> {result['pdf_id']}")
             return UploadResponse(**result)
