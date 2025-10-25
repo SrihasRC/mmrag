@@ -1,0 +1,76 @@
+{
+  "timestamp": "2025-10-25T23:16:57.708732",
+  "use_semantic_chunking": true,
+  "total_pdfs": 5,
+  "pdf_results": [
+    {
+      "pdf_name": "coherence-based-measure-of-agi.pdf",
+      "pdf_id": "0963392d-71ae-4d75-ae43-ab363f42644a",
+      "status": "success",
+      "processing_time": 124.26268863677979,
+      "num_chunks": 0,
+      "num_tables": 12,
+      "num_images": 0,
+      "embeddings_created": 0,
+      "avg_retrieval_score": 1.0,
+      "queries_tested": 3
+    },
+    {
+      "pdf_name": "LLM-det-anom-digital-asset-transns.pdf",
+      "pdf_id": "5b19704e-1f86-4ea2-9531-e64d03d90512",
+      "status": "success",
+      "processing_time": 57.11670255661011,
+      "num_chunks": 0,
+      "num_tables": 3,
+      "num_images": 0,
+      "embeddings_created": 0,
+      "avg_retrieval_score": 1.0,
+      "queries_tested": 3
+    },
+    {
+      "pdf_name": "plan-then-retrieve.pdf",
+      "pdf_id": "46d34f36-7426-4111-b786-f0a751df4a62",
+      "status": "success",
+      "processing_time": 101.11474347114563,
+      "num_chunks": 0,
+      "num_tables": 5,
+      "num_images": 0,
+      "embeddings_created": 0,
+      "avg_retrieval_score": 1.0,
+      "queries_tested": 3
+    },
+    {
+      "pdf_name": "attention.pdf",
+      "pdf_id": "b4e64a39-e0c4-4513-83a8-7050f1c2f23a",
+      "status": "success",
+      "processing_time": 58.01995778083801,
+      "num_chunks": 0,
+      "num_tables": 4,
+      "num_images": 0,
+      "embeddings_created": 0,
+      "avg_retrieval_score": 1.0,
+      "queries_tested": 3
+    },
+    {
+      "pdf_name": "are-large-models-good-transl-evaluators.pdf",
+      "pdf_id": "43d59125-935c-4af0-99a8-163b24f4657b",
+      "status": "success",
+      "processing_time": 126.78036522865295,
+      "num_chunks": 0,
+      "num_tables": 8,
+      "num_images": 0,
+      "embeddings_created": 0,
+      "avg_retrieval_score": 1.0,
+      "queries_tested": 3
+    }
+  ],
+  "aggregate_metrics": {
+    "success_rate": 1.0,
+    "avg_chunks_per_pdf": 0.0,
+    "std_chunks_per_pdf": 0.0,
+    "total_chunks": 0,
+    "avg_retrieval_score": 1.0,
+    "avg_processing_time": 93.4588915348053,
+    "total_processing_time": 467.2944576740265
+  }
+}
