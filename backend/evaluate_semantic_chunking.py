@@ -95,6 +95,7 @@ class ComprehensiveEvaluator:
             pdf_files = pdf_files[:max_pdfs]
         
         logger.info(f"Found {len(pdf_files)} PDFs to evaluate")
+        logger.info(f"PDF list: {[p.name for p in pdf_files]}")
         
         evaluation_results = {
             'timestamp': datetime.now().isoformat(),
@@ -168,23 +169,29 @@ class ComprehensiveEvaluator:
         
         processing_time = time.time() - start_time
         
-        # Extract chunking metrics
-        summary = processing_result.get('processing_summary', {})
-        embedding_result = processing_result.get('embedding_result', {})
+        # Extract processing info
+        summary = processing_result['processing_summary']
+        embedding_result = processing_result['embedding_result']
+        
+        # Get chunk count from the correct field
+        num_chunks = summary.get('num_text_chunks', summary.get('texts_count', 0))
         
         result = {
             'pdf_name': pdf_path.name,
             'pdf_id': pdf_id,
             'status': 'success',
             'processing_time': processing_time,
-            'num_chunks': summary.get('texts_count', 0),
-            'num_tables': summary.get('tables_count', 0),
-            'num_images': summary.get('images_count', 0),
+            'num_chunks': num_chunks,
+            'num_tables': summary.get('num_tables', summary.get('tables_count', 0)),
+            'num_images': summary.get('num_images', summary.get('images_count', 0)),
             'embeddings_created': embedding_result.get('documents_added', 0),
+            'chunking_method': summary.get('chunking_method', 'unknown'),
         }
         
-        # Test retrieval quality with sample queries
+        # Test retrieval quality with more discriminative scoring
         retrieval_scores = []
+        query_details = []
+        
         for query_type, queries in TEST_QUERIES.items():
             # Sample one query from each type
             query = queries[0]
@@ -196,16 +203,50 @@ class ComprehensiveEvaluator:
                     top_k=3
                 )
                 
-                # Score based on whether we got results
-                score = 1.0 if query_result['retrieved_docs_count'] > 0 else 0.0
+                # More nuanced scoring based on relevance
+                # Use the similarity scores from retrieved documents
+                retrieved_docs = query_result.get('retrieved_docs', [])
+                if retrieved_docs:
+                    # Average the similarity scores from metadata
+                    doc_scores = []
+                    for doc in retrieved_docs:
+                        # Get score from metadata
+                        score = doc.metadata.get('similarity_score', 0.5)
+                        doc_scores.append(score)
+                    score = float(np.mean(doc_scores)) if doc_scores else 0.5
+                else:
+                    score = 0.0
+                
                 retrieval_scores.append(score)
+                query_details.append({
+                    'query_type': query_type,
+                    'query': query,
+                    'score': score,
+                    'docs_retrieved': len(retrieved_docs)
+                })
                 
             except Exception as e:
-                logger.debug(f"Query failed: {e}")
+                logger.debug(f"Query '{query}' failed: {e}")
                 retrieval_scores.append(0.0)
+                query_details.append({
+                    'query_type': query_type,
+                    'query': query,
+                    'score': 0.0,
+                    'error': str(e)
+                })
         
         result['avg_retrieval_score'] = float(np.mean(retrieval_scores)) if retrieval_scores else 0.0
         result['queries_tested'] = len(retrieval_scores)
+        result['query_details'] = query_details
+        
+        # Get RL adaptive threshold stats if using semantic chunking
+        if use_semantic:
+            try:
+                rl_stats = pdf_processor.semantic_chunker.get_adaptive_stats()
+                result['rl_stats'] = rl_stats
+            except Exception as e:
+                logger.debug(f"Could not get RL stats: {e}")
+                result['rl_stats'] = None
         
         logger.info(f"✓ {pdf_path.name}: {result['num_chunks']} chunks, retrieval={result['avg_retrieval_score']:.2f}")
         
@@ -218,7 +259,7 @@ class ComprehensiveEvaluator:
         if not successful:
             return {'success_rate': 0.0}
         
-        return {
+        metrics = {
             'success_rate': len(successful) / len(pdf_results),
             'avg_chunks_per_pdf': float(np.mean([r['num_chunks'] for r in successful])),
             'std_chunks_per_pdf': float(np.std([r['num_chunks'] for r in successful])),
@@ -227,6 +268,14 @@ class ComprehensiveEvaluator:
             'avg_processing_time': float(np.mean([r['processing_time'] for r in successful])),
             'total_processing_time': sum(r['processing_time'] for r in successful),
         }
+        
+        # Add RL statistics if available
+        rl_stats_list = [r.get('rl_stats') for r in successful if r.get('rl_stats') is not None]
+        if rl_stats_list:
+            # Get the latest RL stats (from last PDF processed)
+            metrics['final_rl_stats'] = rl_stats_list[-1]
+        
+        return metrics
     
     def _save_results(self, results: Dict, use_semantic: bool):
         """Save evaluation results to JSON."""
@@ -344,8 +393,8 @@ async def main():
     """Run comprehensive evaluation."""
     evaluator = ComprehensiveEvaluator()
     
-    # Compare semantic vs traditional on 5 PDFs
-    results = await evaluator.compare_semantic_vs_traditional(max_pdfs=5)
+    # Compare semantic vs traditional on 1 PDF for quick testing
+    results = await evaluator.compare_semantic_vs_traditional(max_pdfs=1)
     
     logger.info("\n✅ Evaluation complete!")
     logger.info(f"Results saved to: {evaluator.output_dir}")

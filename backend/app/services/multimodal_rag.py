@@ -597,20 +597,29 @@ class MultimodalRAGService:
             
             if target_pdf_ids and len(target_pdf_ids) > 1:
                 # For multiple PDFs, search without filter and then filter results
-                all_docs = await vector_store_service.similarity_search(
+                docs_with_scores = await vector_store_service.similarity_search_with_scores(
                     query=question,
                     k=top_k * 3,  # Get more results to ensure we have enough after filtering
                     filter_metadata=None
                 )
-                # Filter results to only include documents from target PDFs
-                retrieved_docs = [doc for doc in all_docs if doc.metadata.get("pdf_id") in target_pdf_ids][:top_k]
+                # Filter results and attach scores
+                filtered = [(doc, score) for doc, score in docs_with_scores if doc.metadata.get("pdf_id") in target_pdf_ids][:top_k]
+                retrieved_docs = []
+                for doc, score in filtered:
+                    doc.metadata['similarity_score'] = float(score)
+                    retrieved_docs.append(doc)
             else:
                 # Single PDF or no filter
-                retrieved_docs = await vector_store_service.similarity_search(
+                docs_with_scores = await vector_store_service.similarity_search_with_scores(
                     query=question,
                     k=top_k,
                     filter_metadata=filter_metadata
                 )
+                # Attach scores to documents
+                retrieved_docs = []
+                for doc, score in docs_with_scores:
+                    doc.metadata['similarity_score'] = float(score)
+                    retrieved_docs.append(doc)
             
             if not retrieved_docs:
                 return {
@@ -652,7 +661,7 @@ class MultimodalRAGService:
                     "documentId": doc_pdf_id,
                     "pageNumber": doc.metadata.get("page_number", 1),
                     "snippet": snippet,
-                    "relevanceScore": getattr(doc, 'similarity_score', 0.8),
+                    "relevanceScore": doc.metadata.get('similarity_score', 0.5),  # Use actual score from metadata
                     "contentType": doc.metadata.get("content_type", "text")
                 })
             
@@ -662,13 +671,14 @@ class MultimodalRAGService:
                 "references": references,  # Frontend expects this
                 "sources": [],  # Keep for backward compatibility
                 "pdf_id": target_pdf_ids[0] if target_pdf_ids else None,
-                "retrieved_docs_count": len(retrieved_docs)
+                "retrieved_docs_count": len(retrieved_docs),
+                "retrieved_docs": retrieved_docs  # Add docs for evaluation
             }
             
             # Provide feedback to adaptive threshold (RL component)
             # Heuristic: If we got good retrieval (multiple docs with high scores), it's useful
             if retrieved_docs:
-                avg_score = np.mean([getattr(doc, 'similarity_score', 0.8) for doc in retrieved_docs])
+                avg_score = np.mean([doc.metadata.get('similarity_score', 0.5) for doc in retrieved_docs])
                 chunk_was_useful = avg_score > 0.6 and len(retrieved_docs) >= top_k // 2
                 
                 # Provide feedback to semantic chunker's adaptive threshold

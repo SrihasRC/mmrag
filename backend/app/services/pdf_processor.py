@@ -322,9 +322,11 @@ class PDFProcessor:
         
         # Separate tables from texts
         for chunk in chunks:
-            if "Table" in str(type(chunk)):
+            chunk_type = str(type(chunk))
+            if "Table" in chunk_type:
                 tables.append(chunk)
-            elif "CompositeElement" in str(type(chunk)):
+            elif "CompositeElement" in chunk_type or "SemanticChunkElement" in chunk_type:
+                # Include both traditional CompositeElement and semantic chunks
                 texts.append(chunk)
         
         # Get images from CompositeElement objects

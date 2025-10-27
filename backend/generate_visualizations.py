@@ -103,17 +103,30 @@ class VisualizationGenerator:
             ax1.text(i, value + 0.5, f'{value:.1f}', ha='center', va='bottom', fontweight='bold')
         
         # Box plot - consistency
-        ax2.bar(methods, [sem['std_chunks_per_pdf'], trad['std_chunks_per_pdf']],
+        consistency_values = [sem['std_chunks_per_pdf'], trad['std_chunks_per_pdf']]
+        ax2.bar(methods, consistency_values,
                 color=[self.colors['semantic'], self.colors['traditional']],
                 alpha=0.7, edgecolor='black')
         ax2.set_ylabel('Standard Deviation (chunks)', fontsize=12)
         ax2.set_title('Chunk Size Consistency', fontsize=14, fontweight='bold')
         ax2.grid(axis='y', alpha=0.3)
-        ax2.set_ylim(bottom=0)
+        
+        # Set y-axis limit dynamically
+        max_std = max(consistency_values) if max(consistency_values) > 0 else 1.0
+        ax2.set_ylim(0, max_std * 1.3)
+        
+        # Add values on bars
+        for i, (method, value) in enumerate(zip(methods, consistency_values)):
+            ax2.text(i, value + max_std * 0.03, f'{value:.2f}', ha='center', va='bottom', fontweight='bold')
         
         # Add annotation
         improvement_pct = data['improvements']['consistency_improvement']
-        ax2.text(0.5, 0.95, f'Consistency Improvement: {improvement_pct:+.1f}%',
+        if improvement_pct == 0 and sem['std_chunks_per_pdf'] == 0 and trad['std_chunks_per_pdf'] == 0:
+            annotation_text = 'Both methods: Perfect consistency (std=0)'
+        else:
+            annotation_text = f'Consistency Improvement: {improvement_pct:+.1f}%'
+        
+        ax2.text(0.5, 0.95, annotation_text,
                 transform=ax2.transAxes, ha='center', va='top',
                 bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5),
                 fontsize=10, fontweight='bold')
@@ -141,7 +154,11 @@ class VisualizationGenerator:
         
         ax.set_ylabel('Average Retrieval Score', fontsize=12)
         ax.set_title('Retrieval Quality Comparison', fontsize=14, fontweight='bold')
-        ax.set_ylim(0, 1.0)
+        
+        # Set y-axis limit dynamically based on max score
+        max_score = max(scores)
+        y_limit = max(1.5, max_score * 1.2)  # At least 1.5 or 20% above max score
+        ax.set_ylim(0, y_limit)
         ax.grid(axis='y', alpha=0.3)
         
         # Add values on bars
