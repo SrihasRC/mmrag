@@ -205,6 +205,13 @@ class ComprehensiveEvaluator:
                 
                 # More nuanced scoring based on relevance
                 # Use the similarity scores from retrieved documents
+                # NOTE: similarity_score is cosine similarity (0-1 scale)
+                # HIGHER scores = MORE similar = BETTER retrieval quality
+                # Score interpretation:
+                #   >0.85 = Excellent match
+                #   0.7-0.85 = Good match
+                #   0.5-0.7 = Moderate match
+                #   <0.5 = Poor match
                 retrieved_docs = query_result.get('retrieved_docs', [])
                 if retrieved_docs:
                     # Average the similarity scores from metadata

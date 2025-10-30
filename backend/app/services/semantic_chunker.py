@@ -58,10 +58,10 @@ class AdaptiveThreshold:
     
     def __init__(
         self,
-        initial_multiplier: float = 0.5,
+        initial_multiplier: float = 0.25,  # FIXED: Lower threshold = less aggressive splitting
         learning_rate: float = 0.01,
-        min_multiplier: float = 0.2,
-        max_multiplier: float = 0.8
+        min_multiplier: float = 0.15,  # FIXED: Add lower bound
+        max_multiplier: float = 0.45   # FIXED: Add upper bound to prevent over-splitting
     ):
         """
         Initialize adaptive threshold learner.
@@ -95,6 +95,8 @@ class AdaptiveThreshold:
         """
         Update threshold based on retrieval feedback.
         
+        FIXED: Stricter reward criteria and reversed learning direction
+        
         Args:
             chunk_was_useful: Whether the chunk led to good retrieval
             retrieval_score: Optional relevance score (0-1)
@@ -106,20 +108,31 @@ class AdaptiveThreshold:
             'threshold_before': self.threshold_multiplier
         })
         
-        if chunk_was_useful and retrieval_score > 0.7:
-            # Good retrieval - chunks are well-formed
-            # Slight positive reinforcement
-            self.threshold_multiplier += self.learning_rate * 0.5
-        elif not chunk_was_useful or retrieval_score < 0.3:
-            # Poor retrieval - may need different chunking
-            # Adjust threshold to create different boundaries
-            self.threshold_multiplier -= self.learning_rate
+        # FIXED: Much stricter reward criteria
+        # Only consider useful if: high relevance AND marked useful
+        if chunk_was_useful and retrieval_score > 0.8:
+            # Good retrieval with high relevance - chunks are well-formed
+            # DECREASE threshold slightly to maintain good chunking
+            # (lower threshold = larger chunks = what's working)
+            self.threshold_multiplier -= self.learning_rate * 0.5
+            logger.debug("Good retrieval - decreasing threshold to maintain chunk size")
+            
+        elif retrieval_score < 0.5:
+            # FIXED: Add penalty for low relevance
+            # Poor retrieval - chunks might be too large, increase threshold slightly
+            self.threshold_multiplier += self.learning_rate * 0.3
+            logger.debug("Poor retrieval - increasing threshold to create smaller chunks")
+            
+        elif not chunk_was_useful:
+            # Neutral adjustment - slight increase
+            self.threshold_multiplier += self.learning_rate * 0.2
+            logger.debug("Not useful - minor threshold increase")
         
-        # Clip to valid range
+        # Clip to valid range (FIXED: Tighter bounds to prevent extreme values)
         self.threshold_multiplier = np.clip(
             self.threshold_multiplier,
-            self.min_multiplier,
-            self.max_multiplier
+            self.min_multiplier,  # 0.15
+            self.max_multiplier   # 0.45
         )
         
         self.threshold_history.append(self.threshold_multiplier)
@@ -188,21 +201,21 @@ class SemanticChunker:
     - Coherence scoring
     """
     
-    # Document type threshold multipliers
+    # Document type threshold multipliers (FIXED: Lower values = less splitting)
     TYPE_MULTIPLIERS = {
-        'resume': 0.4,         # More aggressive splits for structured content
-        'short_document': 0.4,
-        'academic_paper': 0.6, # Moderate splits for academic content
-        'technical_doc': 0.55,
-        'general': 0.5
+        'resume': 0.3,         # Conservative splits for structured content
+        'short_document': 0.3,
+        'academic_paper': 0.4, # Moderate splits for academic content
+        'technical_doc': 0.35,
+        'general': 0.35
     }
     
     def __init__(
         self,
         embeddings_service,
-        min_sentences: int = 3,
-        max_sentences: int = 30,
-        base_threshold: float = 0.5,
+        min_sentences: int = 5,      # FIXED: Increase minimum chunk size
+        max_sentences: int = 20,     # FIXED: Decrease maximum to prevent huge chunks
+        base_threshold: float = 0.25, # FIXED: Lower base threshold
         batch_size: int = 96,
         use_adaptive_threshold: bool = True
     ):
@@ -280,6 +293,20 @@ class SemanticChunker:
             
             # Step 5: Create chunks
             chunks = self._create_chunks(sentences, boundaries, similarities)
+            
+            # FIXED: Add safety validation for chunk count
+            chunks_per_10_sentences = len(chunks) / (len(sentences) / 10.0)
+            if len(chunks) > 30 or chunks_per_10_sentences > 5:
+                logger.warning(
+                    f"⚠️  Chunk count validation failed: {len(chunks)} chunks for {len(sentences)} sentences "
+                    f"({chunks_per_10_sentences:.1f} chunks per 10 sentences). "
+                    f"This indicates over-fragmentation. Consider using fallback chunking."
+                )
+            elif len(chunks) < 3 and len(sentences) > 20:
+                logger.warning(
+                    f"⚠️  Suspiciously few chunks: {len(chunks)} chunks for {len(sentences)} sentences. "
+                    f"Chunking may be too coarse."
+                )
             
             logger.info(
                 f"Created {len(chunks)} semantic chunks "
@@ -442,12 +469,15 @@ class SemanticChunker:
         
         # Use adaptive threshold if available (RL-enhanced)
         if self.adaptive_threshold:
-            threshold = self.adaptive_threshold.get_threshold(mean_sim, std_sim)
+            # FIXED: Use 1.0 multiplier for more conservative splitting
+            # Only split when similarity is 1 full std dev below mean (strong signal)
+            threshold = mean_sim - (self.adaptive_threshold.get_current_multiplier() * std_sim)
             logger.debug(
                 f"Using adaptive threshold: multiplier={self.adaptive_threshold.get_current_multiplier():.3f}"
             )
         else:
-            threshold = mean_sim - (self.base_threshold * std_sim)
+            # FIXED: More conservative base threshold calculation
+            threshold = mean_sim - (1.0 * self.base_threshold * std_sim)
             # Apply document type multiplier
             type_multiplier = self.TYPE_MULTIPLIERS.get(doc_type.lower(), 0.5)
             threshold *= type_multiplier

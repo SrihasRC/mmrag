@@ -676,10 +676,22 @@ class MultimodalRAGService:
             }
             
             # Provide feedback to adaptive threshold (RL component)
-            # Heuristic: If we got good retrieval (multiple docs with high scores), it's useful
+            # FIXED: Much stricter criteria for "useful" chunks
+            # Only mark as useful if ALL of these are true:
+            # 1. High average relevance (>0.8)
+            # 2. Got at least top_k results
+            # 3. Top result has very high relevance (>0.85)
             if retrieved_docs:
-                avg_score = np.mean([doc.metadata.get('similarity_score', 0.5) for doc in retrieved_docs])
-                chunk_was_useful = avg_score > 0.6 and len(retrieved_docs) >= top_k // 2
+                scores = [doc.metadata.get('similarity_score', 0.5) for doc in retrieved_docs]
+                avg_score = np.mean(scores)
+                top_score = scores[0] if scores else 0.0
+                
+                # FIXED: Strict criteria - only top-quality retrievals count as "useful"
+                chunk_was_useful = bool(
+                    avg_score > 0.8 and 
+                    top_score > 0.85 and 
+                    len(retrieved_docs) >= top_k
+                )
                 
                 # Provide feedback to semantic chunker's adaptive threshold
                 try:
@@ -688,6 +700,10 @@ class MultimodalRAGService:
                         pdf_processor.semantic_chunker.provide_feedback(
                             chunk_was_useful=chunk_was_useful,
                             retrieval_score=float(avg_score)
+                        )
+                        logger.debug(
+                            f"RL feedback: useful={chunk_was_useful}, avg_score={avg_score:.3f}, "
+                            f"top_score={top_score:.3f}, count={len(retrieved_docs)}"
                         )
                 except Exception as e:
                     logger.debug(f"Could not provide RL feedback: {e}")
