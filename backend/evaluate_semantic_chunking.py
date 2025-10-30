@@ -391,10 +391,22 @@ class ComprehensiveEvaluator:
 
 async def main():
     """Run comprehensive evaluation."""
-    evaluator = ComprehensiveEvaluator()
+    # Check if we should use 5 PDFs (for comprehensive evaluation)
+    import sys
     
-    # Compare semantic vs traditional on 1 PDF for quick testing
-    results = await evaluator.compare_semantic_vs_traditional(max_pdfs=1)
+    if len(sys.argv) > 1 and sys.argv[1] == "--5pdf":
+        output_dir = "./evaluation_results_5pdf"
+        max_pdfs = 5
+        logger.info("Running comprehensive 5-PDF evaluation")
+    else:
+        output_dir = "./evaluation_results"
+        max_pdfs = 1
+        logger.info("Running single-PDF quick test")
+    
+    evaluator = ComprehensiveEvaluator(output_dir=output_dir)
+    
+    # Compare semantic vs traditional
+    results = await evaluator.compare_semantic_vs_traditional(max_pdfs=max_pdfs)
     
     logger.info("\n✅ Evaluation complete!")
     logger.info(f"Results saved to: {evaluator.output_dir}")

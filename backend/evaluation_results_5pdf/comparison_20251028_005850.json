@@ -1,0 +1,50 @@
+{
+  "timestamp": "2025-10-28T00:58:50.211872",
+  "semantic": {
+    "success_rate": 1.0,
+    "avg_chunks_per_pdf": 43.2,
+    "std_chunks_per_pdf": 9.558242516278817,
+    "total_chunks": 216,
+    "avg_retrieval_score": 1.2611310442288717,
+    "avg_processing_time": 622.2536902427673,
+    "total_processing_time": 3111.2684512138367,
+    "final_rl_stats": {
+      "total_updates": 15,
+      "current_multiplier": 0.5750000000000001,
+      "useful_rate": 1.0,
+      "avg_retrieval_score": 1.2611310442288715,
+      "threshold_evolution": [
+        0.53,
+        0.535,
+        0.54,
+        0.545,
+        0.55,
+        0.555,
+        0.56,
+        0.5650000000000001,
+        0.5700000000000001,
+        0.5750000000000001
+      ],
+      "multiplier_range": [
+        0.5,
+        0.5750000000000001
+      ]
+    }
+  },
+  "traditional": {
+    "success_rate": 1.0,
+    "avg_chunks_per_pdf": 6.2,
+    "std_chunks_per_pdf": 2.039607805437114,
+    "total_chunks": 31,
+    "avg_retrieval_score": 1.3695207436879475,
+    "avg_processing_time": 236.33491888046265,
+    "total_processing_time": 1181.6745944023132
+  },
+  "improvements": {
+    "chunk_count_diff": 37.0,
+    "chunk_count_pct": 596.7741935483871,
+    "retrieval_score_diff": -0.10838969945907584,
+    "retrieval_improvement_pct": -7.9144255359868465,
+    "consistency_improvement": -368.6313952515181
+  }
+}

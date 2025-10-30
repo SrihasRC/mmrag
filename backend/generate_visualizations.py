@@ -303,11 +303,21 @@ class VisualizationGenerator:
 
 def main():
     """Generate all visualizations from latest results."""
+    import sys
+    
     logger.info("=" * 70)
     logger.info("VISUALIZATION GENERATOR")
     logger.info("=" * 70)
     
-    generator = VisualizationGenerator()
+    # Check for --5pdf flag
+    results_dir = "./evaluation_results"
+    if "--5pdf" in sys.argv:
+        results_dir = "./evaluation_results_5pdf"
+        logger.info("📊 Using 5-PDF results directory")
+    else:
+        logger.info("📊 Using single-PDF results directory")
+    
+    generator = VisualizationGenerator(results_dir=results_dir)
     generator.generate_all_visualizations()
     
     # Generate sample RL threshold evolution

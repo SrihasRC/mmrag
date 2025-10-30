@@ -1,0 +1,304 @@
+{
+  "timestamp": "2025-10-27T23:41:37.355143",
+  "use_semantic_chunking": true,
+  "total_pdfs": 5,
+  "pdf_results": [
+    {
+      "pdf_name": "coherence-based-measure-of-agi.pdf",
+      "pdf_id": "ae1ff17d-7177-4a34-b00d-25eb4fa42b7b",
+      "status": "success",
+      "processing_time": 362.5179440975189,
+      "num_chunks": 43,
+      "num_tables": 12,
+      "num_images": 0,
+      "embeddings_created": 0,
+      "chunking_method": "unknown",
+      "avg_retrieval_score": 1.2808168199327257,
+      "queries_tested": 3,
+      "query_details": [
+        {
+          "query_type": "factual",
+          "query": "What is the main dataset used in this paper?",
+          "score": 1.2303311030069988,
+          "docs_retrieved": 3
+        },
+        {
+          "query_type": "conceptual",
+          "query": "Explain the main methodology",
+          "score": 1.2587780157725017,
+          "docs_retrieved": 3
+        },
+        {
+          "query_type": "comparative",
+          "query": "How does this compare to previous work?",
+          "score": 1.3533413410186768,
+          "docs_retrieved": 3
+        }
+      ],
+      "rl_stats": {
+        "total_updates": 3,
+        "current_multiplier": 0.515,
+        "useful_rate": 1.0,
+        "avg_retrieval_score": 1.2808168199327257,
+        "threshold_evolution": [
+          0.5,
+          0.505,
+          0.51,
+          0.515
+        ],
+        "multiplier_range": [
+          0.5,
+          0.515
+        ]
+      }
+    },
+    {
+      "pdf_name": "LLM-det-anom-digital-asset-transns.pdf",
+      "pdf_id": "8d6d2d65-6979-41b9-8c68-2f4a5f80d8ae",
+      "status": "success",
+      "processing_time": 351.0784044265747,
+      "num_chunks": 35,
+      "num_tables": 3,
+      "num_images": 0,
+      "embeddings_created": 0,
+      "chunking_method": "unknown",
+      "avg_retrieval_score": 1.290044903755188,
+      "queries_tested": 3,
+      "query_details": [
+        {
+          "query_type": "factual",
+          "query": "What is the main dataset used in this paper?",
+          "score": 1.1965492566426594,
+          "docs_retrieved": 3
+        },
+        {
+          "query_type": "conceptual",
+          "query": "Explain the main methodology",
+          "score": 1.2669925689697266,
+          "docs_retrieved": 3
+        },
+        {
+          "query_type": "comparative",
+          "query": "How does this compare to previous work?",
+          "score": 1.406592885653178,
+          "docs_retrieved": 3
+        }
+      ],
+      "rl_stats": {
+        "total_updates": 6,
+        "current_multiplier": 0.53,
+        "useful_rate": 1.0,
+        "avg_retrieval_score": 1.285430861843957,
+        "threshold_evolution": [
+          0.5,
+          0.505,
+          0.51,
+          0.515,
+          0.52,
+          0.525,
+          0.53
+        ],
+        "multiplier_range": [
+          0.5,
+          0.53
+        ]
+      }
+    },
+    {
+      "pdf_name": "plan-then-retrieve.pdf",
+      "pdf_id": "04fb63b8-c898-4dfb-aecc-474913efe939",
+      "status": "success",
+      "processing_time": 400.74222588539124,
+      "num_chunks": 47,
+      "num_tables": 5,
+      "num_images": 0,
+      "embeddings_created": 0,
+      "chunking_method": "unknown",
+      "avg_retrieval_score": 1.2101669708887737,
+      "queries_tested": 3,
+      "query_details": [
+        {
+          "query_type": "factual",
+          "query": "What is the main dataset used in this paper?",
+          "score": 1.080750306447347,
+          "docs_retrieved": 3
+        },
+        {
+          "query_type": "conceptual",
+          "query": "Explain the main methodology",
+          "score": 1.1565905809402466,
+          "docs_retrieved": 3
+        },
+        {
+          "query_type": "comparative",
+          "query": "How does this compare to previous work?",
+          "score": 1.3931600252787273,
+          "docs_retrieved": 3
+        }
+      ],
+      "rl_stats": {
+        "total_updates": 9,
+        "current_multiplier": 0.545,
+        "useful_rate": 1.0,
+        "avg_retrieval_score": 1.2603428981922289,
+        "threshold_evolution": [
+          0.5,
+          0.505,
+          0.51,
+          0.515,
+          0.52,
+          0.525,
+          0.53,
+          0.535,
+          0.54,
+          0.545
+        ],
+        "multiplier_range": [
+          0.5,
+          0.545
+        ]
+      }
+    },
+    {
+      "pdf_name": "attention.pdf",
+      "pdf_id": "154af4f9-c637-4d52-9803-9bcf70f8b0e7",
+      "status": "success",
+      "processing_time": 630.1924600601196,
+      "num_chunks": 32,
+      "num_tables": 4,
+      "num_images": 0,
+      "embeddings_created": 0,
+      "chunking_method": "unknown",
+      "avg_retrieval_score": 1.2882604797681172,
+      "queries_tested": 3,
+      "query_details": [
+        {
+          "query_type": "factual",
+          "query": "What is the main dataset used in this paper?",
+          "score": 1.021593948205312,
+          "docs_retrieved": 3
+        },
+        {
+          "query_type": "conceptual",
+          "query": "Explain the main methodology",
+          "score": 1.4073600769042969,
+          "docs_retrieved": 3
+        },
+        {
+          "query_type": "comparative",
+          "query": "How does this compare to previous work?",
+          "score": 1.435827414194743,
+          "docs_retrieved": 3
+        }
+      ],
+      "rl_stats": {
+        "total_updates": 12,
+        "current_multiplier": 0.56,
+        "useful_rate": 1.0,
+        "avg_retrieval_score": 1.267322293586201,
+        "threshold_evolution": [
+          0.515,
+          0.52,
+          0.525,
+          0.53,
+          0.535,
+          0.54,
+          0.545,
+          0.55,
+          0.555,
+          0.56
+        ],
+        "multiplier_range": [
+          0.5,
+          0.56
+        ]
+      }
+    },
+    {
+      "pdf_name": "are-large-models-good-transl-evaluators.pdf",
+      "pdf_id": "b179d81c-3174-4e55-85a0-16a6bf255f12",
+      "status": "success",
+      "processing_time": 1366.7374167442322,
+      "num_chunks": 59,
+      "num_tables": 8,
+      "num_images": 0,
+      "embeddings_created": 0,
+      "chunking_method": "unknown",
+      "avg_retrieval_score": 1.2363660467995536,
+      "queries_tested": 3,
+      "query_details": [
+        {
+          "query_type": "factual",
+          "query": "What is the main dataset used in this paper?",
+          "score": 1.1129984855651855,
+          "docs_retrieved": 3
+        },
+        {
+          "query_type": "conceptual",
+          "query": "Explain the main methodology",
+          "score": 1.2391856511433919,
+          "docs_retrieved": 3
+        },
+        {
+          "query_type": "comparative",
+          "query": "How does this compare to previous work?",
+          "score": 1.3569140036900837,
+          "docs_retrieved": 3
+        }
+      ],
+      "rl_stats": {
+        "total_updates": 15,
+        "current_multiplier": 0.5750000000000001,
+        "useful_rate": 1.0,
+        "avg_retrieval_score": 1.2611310442288715,
+        "threshold_evolution": [
+          0.53,
+          0.535,
+          0.54,
+          0.545,
+          0.55,
+          0.555,
+          0.56,
+          0.5650000000000001,
+          0.5700000000000001,
+          0.5750000000000001
+        ],
+        "multiplier_range": [
+          0.5,
+          0.5750000000000001
+        ]
+      }
+    }
+  ],
+  "aggregate_metrics": {
+    "success_rate": 1.0,
+    "avg_chunks_per_pdf": 43.2,
+    "std_chunks_per_pdf": 9.558242516278817,
+    "total_chunks": 216,
+    "avg_retrieval_score": 1.2611310442288717,
+    "avg_processing_time": 622.2536902427673,
+    "total_processing_time": 3111.2684512138367,
+    "final_rl_stats": {
+      "total_updates": 15,
+      "current_multiplier": 0.5750000000000001,
+      "useful_rate": 1.0,
+      "avg_retrieval_score": 1.2611310442288715,
+      "threshold_evolution": [
+        0.53,
+        0.535,
+        0.54,
+        0.545,
+        0.55,
+        0.555,
+        0.56,
+        0.5650000000000001,
+        0.5700000000000001,
+        0.5750000000000001
+      ],
+      "multiplier_range": [
+        0.5,
+        0.5750000000000001
+      ]
+    }
+  }
+}
