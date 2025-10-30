@@ -201,23 +201,23 @@ class SemanticChunker:
     - Coherence scoring
     """
     
-    # Document type threshold multipliers (FIXED: Lower values = less splitting)
+    # Document type threshold multipliers (FIXED: Even lower = fewer splits)
     TYPE_MULTIPLIERS = {
-        'resume': 0.3,         # Conservative splits for structured content
-        'short_document': 0.3,
-        'academic_paper': 0.4, # Moderate splits for academic content
-        'technical_doc': 0.35,
-        'general': 0.35
+        'resume': 0.2,         # Very conservative - preserve document structure
+        'short_document': 0.2,
+        'academic_paper': 0.25, # Academic papers benefit from section-level chunks
+        'technical_doc': 0.25,
+        'general': 0.25
     }
     
     def __init__(
         self,
         embeddings_service,
-        min_sentences: int = 5,      # FIXED: Increase minimum chunk size
-        max_sentences: int = 20,     # FIXED: Decrease maximum to prevent huge chunks
-        base_threshold: float = 0.25, # FIXED: Lower base threshold
+        min_sentences: int = 10,     # FIXED: Further increase to prevent over-chunking
+        max_sentences: int = 25,     # FIXED: Increase max slightly for flexibility
+        base_threshold: float = 0.15, # FIXED: Lower threshold = split only on very dissimilar
         batch_size: int = 96,
-        use_adaptive_threshold: bool = True
+        use_adaptive_threshold: bool = False  # FIXED: Disable RL until base chunking works
     ):
         """
         Initialize the semantic chunker.
@@ -294,13 +294,23 @@ class SemanticChunker:
             # Step 5: Create chunks
             chunks = self._create_chunks(sentences, boundaries, similarities)
             
-            # FIXED: Add safety validation for chunk count
+            # FIXED: Stricter validation with auto-fallback
             chunks_per_10_sentences = len(chunks) / (len(sentences) / 10.0)
+            target_chunks = max(3, len(sentences) // 15)  # Target: ~1 chunk per 15 sentences
+            
+            # Critical validation: If over-chunking is severe, use fallback
+            if len(chunks) > target_chunks * 2.5:
+                logger.error(
+                    f"🚨 SEVERE over-fragmentation: {len(chunks)} chunks for {len(sentences)} sentences "
+                    f"(target was ~{target_chunks}). Using fallback chunking instead."
+                )
+                return self._fallback_chunking(text)
+            
+            # Warning-level issues
             if len(chunks) > 30 or chunks_per_10_sentences > 5:
                 logger.warning(
                     f"⚠️  Chunk count validation failed: {len(chunks)} chunks for {len(sentences)} sentences "
-                    f"({chunks_per_10_sentences:.1f} chunks per 10 sentences). "
-                    f"This indicates over-fragmentation. Consider using fallback chunking."
+                    f"({chunks_per_10_sentences:.1f} chunks per 10 sentences). Target: ~{target_chunks} chunks."
                 )
             elif len(chunks) < 3 and len(sentences) > 20:
                 logger.warning(
@@ -309,7 +319,7 @@ class SemanticChunker:
                 )
             
             logger.info(
-                f"Created {len(chunks)} semantic chunks "
+                f"Created {len(chunks)} semantic chunks (target: ~{target_chunks}) "
                 f"(avg coherence: {np.mean([c.coherence_score for c in chunks]):.3f})"
             )
             
@@ -467,24 +477,28 @@ class SemanticChunker:
         mean_sim = np.mean(similarities)
         std_sim = np.std(similarities)
         
+        # FIXED: Use percentile-based approach for more robust thresholding
+        # Only split at the lowest 15-20% of similarities (strong dissimilarity signals)
+        percentile_threshold = np.percentile(similarities, 20)  # Bottom 20%
+        
         # Use adaptive threshold if available (RL-enhanced)
         if self.adaptive_threshold:
-            # FIXED: Use 1.0 multiplier for more conservative splitting
-            # Only split when similarity is 1 full std dev below mean (strong signal)
-            threshold = mean_sim - (self.adaptive_threshold.get_current_multiplier() * std_sim)
+            # Combine percentile with adaptive learning
+            adaptive_factor = self.adaptive_threshold.get_current_multiplier()
+            threshold = percentile_threshold * (1.0 - adaptive_factor)
             logger.debug(
-                f"Using adaptive threshold: multiplier={self.adaptive_threshold.get_current_multiplier():.3f}"
+                f"Using adaptive threshold: multiplier={adaptive_factor:.3f}, "
+                f"percentile={percentile_threshold:.3f}"
             )
         else:
-            # FIXED: More conservative base threshold calculation
-            threshold = mean_sim - (1.0 * self.base_threshold * std_sim)
-            # Apply document type multiplier
-            type_multiplier = self.TYPE_MULTIPLIERS.get(doc_type.lower(), 0.5)
-            threshold *= type_multiplier
+            # FIXED: Use percentile-based threshold (more robust than mean-std)
+            # Apply document type multiplier to make it even more conservative
+            type_multiplier = self.TYPE_MULTIPLIERS.get(doc_type.lower(), 0.25)
+            threshold = percentile_threshold * type_multiplier
         
         logger.debug(
             f"Boundary detection: mean_sim={mean_sim:.3f}, std_sim={std_sim:.3f}, "
-            f"threshold={threshold:.3f}, doc_type={doc_type}"
+            f"percentile_20={percentile_threshold:.3f}, threshold={threshold:.3f}, doc_type={doc_type}"
         )
         
         boundaries = [0]  # Always start at 0
@@ -562,7 +576,86 @@ class SemanticChunker:
             )
             chunks.append(chunk)
         
+        # FIXED: Post-process to merge chunks that are too small
+        chunks = self._merge_small_chunks(chunks, similarities)
+        
         return chunks
+    
+    def _merge_small_chunks(
+        self,
+        chunks: List[SemanticChunk],
+        similarities: List[float]
+    ) -> List[SemanticChunk]:
+        """
+        Post-processing: Merge adjacent chunks if they're too small.
+        
+        This prevents over-fragmentation by combining small neighboring chunks
+        when they're reasonably similar.
+        
+        Args:
+            chunks: Initial list of chunks
+            similarities: Similarity scores between sentences
+            
+        Returns:
+            Merged list of chunks
+        """
+        if len(chunks) <= 2:
+            return chunks
+        
+        merged = []
+        i = 0
+        
+        while i < len(chunks):
+            current = chunks[i]
+            
+            # If current chunk is small and not the last one
+            if (len(current.sentences) < self.min_sentences and 
+                i < len(chunks) - 1):
+                
+                next_chunk = chunks[i + 1]
+                
+                # Check if we can merge (won't exceed max size)
+                combined_size = len(current.sentences) + len(next_chunk.sentences)
+                if combined_size <= self.max_sentences:
+                    # Merge the chunks
+                    merged_sentences = current.sentences + next_chunk.sentences
+                    merged_content = ' '.join(merged_sentences)
+                    
+                    # Calculate combined coherence
+                    if current.start_idx < len(similarities):
+                        chunk_sims = similarities[current.start_idx:min(next_chunk.end_idx-1, len(similarities))]
+                        merged_coherence = float(np.mean(chunk_sims)) if chunk_sims else 1.0
+                    else:
+                        merged_coherence = (current.coherence_score + next_chunk.coherence_score) / 2.0
+                    
+                    merged_chunk = SemanticChunk(
+                        content=merged_content,
+                        sentences=merged_sentences,
+                        start_idx=current.start_idx,
+                        end_idx=next_chunk.end_idx,
+                        coherence_score=merged_coherence,
+                        metadata={
+                            'num_sentences': len(merged_sentences),
+                            'char_count': len(merged_content),
+                            'word_count': len(merged_content.split()),
+                            'merged': True
+                        }
+                    )
+                    
+                    merged.append(merged_chunk)
+                    i += 2  # Skip both chunks
+                    logger.debug(f"Merged small chunk: {len(current.sentences)}+{len(next_chunk.sentences)} sentences")
+                    continue
+            
+            # No merge - keep current chunk
+            merged.append(current)
+            i += 1
+        
+        if len(merged) < len(chunks):
+            logger.info(f"Merged {len(chunks)} → {len(merged)} chunks (combined small fragments)")
+        
+        return merged
+
     
     def _create_single_chunk(
         self,
