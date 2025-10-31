@@ -134,14 +134,20 @@ class VectorStoreService:
             return []
     
     async def similarity_search_with_scores(self, query: str, k: int = 5, filter_metadata: Optional[Dict[str, Any]] = None) -> List[tuple]:
-        """Perform similarity search with relevance scores."""
+        """
+        Perform similarity search with relevance scores.
+        
+        IMPORTANT: Chroma returns L2 distance, not cosine similarity!
+        We convert distance to similarity: similarity = 1 / (1 + distance)
+        This ensures scores are in [0, 1] range where higher = more similar.
+        """
         try:
             # Build filter for Chroma
             where_filter = None
             if filter_metadata:
                 where_filter = filter_metadata
             
-            # Perform similarity search with scores
+            # Perform similarity search with scores (returns L2 distance)
             if where_filter:
                 results = self.vectorstore.similarity_search_with_score(
                     query=query,
@@ -154,8 +160,24 @@ class VectorStoreService:
                     k=k
                 )
             
-            logger.info(f"Similarity search with scores returned {len(results)} documents")
-            return results
+            # FIXED: Convert L2 distance to similarity score
+            # Chroma returns (document, distance) where lower distance = more similar
+            # We convert to (document, similarity) where higher score = more similar
+            converted_results = []
+            for doc, distance in results:
+                # Convert distance to similarity: similarity = 1 / (1 + distance)
+                # This maps:
+                #   distance=0 → similarity=1.0 (perfect match)
+                #   distance=1 → similarity=0.5 (moderate)
+                #   distance=∞ → similarity→0 (very different)
+                similarity = 1.0 / (1.0 + distance)
+                converted_results.append((doc, similarity))
+                
+            logger.info(f"Similarity search with scores returned {len(converted_results)} documents")
+            if converted_results:
+                logger.debug(f"Score range: {min(s for _, s in converted_results):.3f} to {max(s for _, s in converted_results):.3f}")
+            
+            return converted_results
             
         except Exception as e:
             logger.error(f"Error in similarity search with scores: {str(e)}")

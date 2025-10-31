@@ -1,13 +1,13 @@
 {
-  "timestamp": "2025-10-31T00:34:44.700702",
+  "timestamp": "2025-10-31T09:43:43.229051",
   "semantic": {
     "success_rate": 1.0,
     "avg_chunks_per_pdf": 10.0,
     "std_chunks_per_pdf": 1.8973665961010275,
     "total_chunks": 50,
-    "avg_retrieval_score": 1.320794420772129,
-    "avg_processing_time": 234.96043524742126,
-    "total_processing_time": 1174.8021762371063,
+    "avg_retrieval_score": 0.43405664534988286,
+    "avg_processing_time": 197.42660102844238,
+    "total_processing_time": 987.1330051422119,
     "final_rl_stats": {}
   },
   "traditional": {
@@ -15,15 +15,15 @@
     "avg_chunks_per_pdf": 6.2,
     "std_chunks_per_pdf": 2.039607805437114,
     "total_chunks": 31,
-    "avg_retrieval_score": 1.3662879546483357,
-    "avg_processing_time": 333.721605682373,
-    "total_processing_time": 1668.6080284118652
+    "avg_retrieval_score": 0.42568691104198864,
+    "avg_processing_time": 209.65372595787048,
+    "total_processing_time": 1048.2686297893524
   },
   "improvements": {
     "chunk_count_diff": 3.8,
     "chunk_count_pct": 61.29032258064515,
-    "retrieval_score_diff": -0.045493533876206804,
-    "retrieval_improvement_pct": -3.329717847649194,
+    "retrieval_score_diff": 0.008369734307894228,
+    "retrieval_improvement_pct": 1.966171402218353,
     "consistency_improvement": 6.973949058093668
   }
 }
