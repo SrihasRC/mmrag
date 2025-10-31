@@ -3,6 +3,7 @@ import uuid
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 import logging
+import numpy as np
 from fastapi import HTTPException
 
 from langchain_groq import ChatGroq
@@ -312,8 +313,20 @@ class MultimodalRAGService:
             logger.warning(f"Error enhancing context: {str(e)}")
             return retrieved_docs  # Fallback to original docs
     
-    async def process_pdf_complete(self, file, save_content: bool = True) -> Dict[str, Any]:
-        """Complete PDF processing pipeline with summarization and vector storage."""
+    async def process_pdf_complete(
+        self, 
+        file, 
+        save_content: bool = True,
+        use_semantic_chunking: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Complete PDF processing pipeline with summarization and vector storage.
+        
+        Args:
+            file: Uploaded PDF file
+            save_content: Whether to save extracted content
+            use_semantic_chunking: Whether to use neural semantic chunking
+        """
         try:
             # Get file metadata before processing
             file_content = await file.read()
@@ -321,8 +334,14 @@ class MultimodalRAGService:
             file_size = len(file_content)
             
             # Step 1: Process PDF and extract elements
-            logger.info(f"Starting complete PDF processing for: {file.filename} ({file_size} bytes)")
-            processing_result = await pdf_processor.process_pdf_file(file)
+            logger.info(
+                f"Starting complete PDF processing for: {file.filename} ({file_size} bytes), "
+                f"semantic_chunking={use_semantic_chunking}"
+            )
+            processing_result = await pdf_processor.process_pdf_file(
+                file,
+                use_semantic_chunking=use_semantic_chunking
+            )
             
             pdf_id = processing_result["file_id"]
             
@@ -578,20 +597,29 @@ class MultimodalRAGService:
             
             if target_pdf_ids and len(target_pdf_ids) > 1:
                 # For multiple PDFs, search without filter and then filter results
-                all_docs = await vector_store_service.similarity_search(
+                docs_with_scores = await vector_store_service.similarity_search_with_scores(
                     query=question,
                     k=top_k * 3,  # Get more results to ensure we have enough after filtering
                     filter_metadata=None
                 )
-                # Filter results to only include documents from target PDFs
-                retrieved_docs = [doc for doc in all_docs if doc.metadata.get("pdf_id") in target_pdf_ids][:top_k]
+                # Filter results and attach scores
+                filtered = [(doc, score) for doc, score in docs_with_scores if doc.metadata.get("pdf_id") in target_pdf_ids][:top_k]
+                retrieved_docs = []
+                for doc, score in filtered:
+                    doc.metadata['similarity_score'] = float(score)
+                    retrieved_docs.append(doc)
             else:
                 # Single PDF or no filter
-                retrieved_docs = await vector_store_service.similarity_search(
+                docs_with_scores = await vector_store_service.similarity_search_with_scores(
                     query=question,
                     k=top_k,
                     filter_metadata=filter_metadata
                 )
+                # Attach scores to documents
+                retrieved_docs = []
+                for doc, score in docs_with_scores:
+                    doc.metadata['similarity_score'] = float(score)
+                    retrieved_docs.append(doc)
             
             if not retrieved_docs:
                 return {
@@ -633,7 +661,7 @@ class MultimodalRAGService:
                     "documentId": doc_pdf_id,
                     "pageNumber": doc.metadata.get("page_number", 1),
                     "snippet": snippet,
-                    "relevanceScore": getattr(doc, 'similarity_score', 0.8),
+                    "relevanceScore": doc.metadata.get('similarity_score', 0.5),  # Use actual score from metadata
                     "contentType": doc.metadata.get("content_type", "text")
                 })
             
@@ -643,8 +671,42 @@ class MultimodalRAGService:
                 "references": references,  # Frontend expects this
                 "sources": [],  # Keep for backward compatibility
                 "pdf_id": target_pdf_ids[0] if target_pdf_ids else None,
-                "retrieved_docs_count": len(retrieved_docs)
+                "retrieved_docs_count": len(retrieved_docs),
+                "retrieved_docs": retrieved_docs  # Add docs for evaluation
             }
+            
+            # Provide feedback to adaptive threshold (RL component)
+            # FIXED: Much stricter criteria for "useful" chunks
+            # Only mark as useful if ALL of these are true:
+            # 1. High average relevance (>0.8)
+            # 2. Got at least top_k results
+            # 3. Top result has very high relevance (>0.85)
+            if retrieved_docs:
+                scores = [doc.metadata.get('similarity_score', 0.5) for doc in retrieved_docs]
+                avg_score = np.mean(scores)
+                top_score = scores[0] if scores else 0.0
+                
+                # FIXED: Strict criteria - only top-quality retrievals count as "useful"
+                chunk_was_useful = bool(
+                    avg_score > 0.8 and 
+                    top_score > 0.85 and 
+                    len(retrieved_docs) >= top_k
+                )
+                
+                # Provide feedback to semantic chunker's adaptive threshold
+                try:
+                    from app.services.pdf_processor import pdf_processor
+                    if pdf_processor.semantic_chunker and pdf_processor.semantic_chunker.adaptive_threshold:
+                        pdf_processor.semantic_chunker.provide_feedback(
+                            chunk_was_useful=chunk_was_useful,
+                            retrieval_score=float(avg_score)
+                        )
+                        logger.debug(
+                            f"RL feedback: useful={chunk_was_useful}, avg_score={avg_score:.3f}, "
+                            f"top_score={top_score:.3f}, count={len(retrieved_docs)}"
+                        )
+                except Exception as e:
+                    logger.debug(f"Could not provide RL feedback: {e}")
             
             logger.info(f"RAG query completed successfully")
             return result

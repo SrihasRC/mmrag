@@ -1,0 +1,187 @@
+{
+  "timestamp": "2025-10-30T23:22:13.013630",
+  "use_semantic_chunking": true,
+  "total_pdfs": 5,
+  "pdf_results": [
+    {
+      "pdf_name": "coherence-based-measure-of-agi.pdf",
+      "pdf_id": "10f6f2dd-e0fd-4f66-bd39-5405ec978cfb",
+      "status": "success",
+      "processing_time": 230.92727756500244,
+      "num_chunks": 10,
+      "num_tables": 12,
+      "num_images": 0,
+      "embeddings_created": 0,
+      "chunking_method": "unknown",
+      "avg_retrieval_score": 1.3244215250015259,
+      "queries_tested": 3,
+      "query_details": [
+        {
+          "query_type": "factual",
+          "query": "What is the main dataset used in this paper?",
+          "score": 1.2866084178288777,
+          "docs_retrieved": 3
+        },
+        {
+          "query_type": "conceptual",
+          "query": "Explain the main methodology",
+          "score": 1.3187598784764607,
+          "docs_retrieved": 3
+        },
+        {
+          "query_type": "comparative",
+          "query": "How does this compare to previous work?",
+          "score": 1.367896278699239,
+          "docs_retrieved": 3
+        }
+      ],
+      "rl_stats": {}
+    },
+    {
+      "pdf_name": "LLM-det-anom-digital-asset-transns.pdf",
+      "pdf_id": "6fc078f0-767f-4dbe-8e35-d2555ec25370",
+      "status": "success",
+      "processing_time": 120.7995777130127,
+      "num_chunks": 8,
+      "num_tables": 3,
+      "num_images": 0,
+      "embeddings_created": 0,
+      "chunking_method": "unknown",
+      "avg_retrieval_score": 1.3359411292605932,
+      "queries_tested": 3,
+      "query_details": [
+        {
+          "query_type": "factual",
+          "query": "What is the main dataset used in this paper?",
+          "score": 1.2462971607844036,
+          "docs_retrieved": 3
+        },
+        {
+          "query_type": "conceptual",
+          "query": "Explain the main methodology",
+          "score": 1.3348471721013386,
+          "docs_retrieved": 3
+        },
+        {
+          "query_type": "comparative",
+          "query": "How does this compare to previous work?",
+          "score": 1.4266790548960369,
+          "docs_retrieved": 3
+        }
+      ],
+      "rl_stats": {}
+    },
+    {
+      "pdf_name": "plan-then-retrieve.pdf",
+      "pdf_id": "b875bd6d-a204-4561-b3aa-d03873d7e2cf",
+      "status": "success",
+      "processing_time": 233.24212908744812,
+      "num_chunks": 11,
+      "num_tables": 5,
+      "num_images": 0,
+      "embeddings_created": 0,
+      "chunking_method": "unknown",
+      "avg_retrieval_score": 1.2843516402774389,
+      "queries_tested": 3,
+      "query_details": [
+        {
+          "query_type": "factual",
+          "query": "What is the main dataset used in this paper?",
+          "score": 1.1959158182144165,
+          "docs_retrieved": 3
+        },
+        {
+          "query_type": "conceptual",
+          "query": "Explain the main methodology",
+          "score": 1.23850679397583,
+          "docs_retrieved": 3
+        },
+        {
+          "query_type": "comparative",
+          "query": "How does this compare to previous work?",
+          "score": 1.4186323086420696,
+          "docs_retrieved": 3
+        }
+      ],
+      "rl_stats": {}
+    },
+    {
+      "pdf_name": "attention.pdf",
+      "pdf_id": "8eaf2bd1-66d5-427d-bd49-bf7e1257389d",
+      "status": "success",
+      "processing_time": 174.49877333641052,
+      "num_chunks": 8,
+      "num_tables": 4,
+      "num_images": 0,
+      "embeddings_created": 0,
+      "chunking_method": "unknown",
+      "avg_retrieval_score": 1.3489725987116497,
+      "queries_tested": 3,
+      "query_details": [
+        {
+          "query_type": "factual",
+          "query": "What is the main dataset used in this paper?",
+          "score": 1.1701939503351848,
+          "docs_retrieved": 3
+        },
+        {
+          "query_type": "conceptual",
+          "query": "Explain the main methodology",
+          "score": 1.427956461906433,
+          "docs_retrieved": 3
+        },
+        {
+          "query_type": "comparative",
+          "query": "How does this compare to previous work?",
+          "score": 1.4487673838933308,
+          "docs_retrieved": 3
+        }
+      ],
+      "rl_stats": {}
+    },
+    {
+      "pdf_name": "are-large-models-good-transl-evaluators.pdf",
+      "pdf_id": "48c4e12f-87a0-448a-8ca3-4b5afdd647ae",
+      "status": "success",
+      "processing_time": 415.33441853523254,
+      "num_chunks": 13,
+      "num_tables": 8,
+      "num_images": 0,
+      "embeddings_created": 0,
+      "chunking_method": "unknown",
+      "avg_retrieval_score": 1.310285210609436,
+      "queries_tested": 3,
+      "query_details": [
+        {
+          "query_type": "factual",
+          "query": "What is the main dataset used in this paper?",
+          "score": 1.2102111180623372,
+          "docs_retrieved": 3
+        },
+        {
+          "query_type": "conceptual",
+          "query": "Explain the main methodology",
+          "score": 1.2903809944788616,
+          "docs_retrieved": 3
+        },
+        {
+          "query_type": "comparative",
+          "query": "How does this compare to previous work?",
+          "score": 1.4302635192871094,
+          "docs_retrieved": 3
+        }
+      ],
+      "rl_stats": {}
+    }
+  ],
+  "aggregate_metrics": {
+    "success_rate": 1.0,
+    "avg_chunks_per_pdf": 10.0,
+    "std_chunks_per_pdf": 1.8973665961010275,
+    "total_chunks": 50,
+    "avg_retrieval_score": 1.320794420772129,
+    "avg_processing_time": 234.96043524742126,
+    "total_processing_time": 1174.8021762371063,
+    "final_rl_stats": {}
+  }
+}

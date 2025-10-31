@@ -1,0 +1,81 @@
+{
+  "timestamp": "2025-10-27T22:42:07.846028",
+  "use_semantic_chunking": true,
+  "total_pdfs": 1,
+  "pdf_results": [
+    {
+      "pdf_name": "coherence-based-measure-of-agi.pdf",
+      "pdf_id": "1e53959a-e057-448c-941a-a84ca32b5b8c",
+      "status": "success",
+      "processing_time": 374.3822441101074,
+      "num_chunks": 43,
+      "num_tables": 12,
+      "num_images": 0,
+      "embeddings_created": 0,
+      "chunking_method": "unknown",
+      "avg_retrieval_score": 1.29440442721049,
+      "queries_tested": 3,
+      "query_details": [
+        {
+          "query_type": "factual",
+          "query": "What is the main dataset used in this paper?",
+          "score": 1.2413924932479858,
+          "docs_retrieved": 3
+        },
+        {
+          "query_type": "conceptual",
+          "query": "Explain the main methodology",
+          "score": 1.2772621313730876,
+          "docs_retrieved": 3
+        },
+        {
+          "query_type": "comparative",
+          "query": "How does this compare to previous work?",
+          "score": 1.3645586570103962,
+          "docs_retrieved": 3
+        }
+      ],
+      "rl_stats": {
+        "total_updates": 3,
+        "current_multiplier": 0.515,
+        "useful_rate": 1.0,
+        "avg_retrieval_score": 1.29440442721049,
+        "threshold_evolution": [
+          0.5,
+          0.505,
+          0.51,
+          0.515
+        ],
+        "multiplier_range": [
+          0.5,
+          0.515
+        ]
+      }
+    }
+  ],
+  "aggregate_metrics": {
+    "success_rate": 1.0,
+    "avg_chunks_per_pdf": 43.0,
+    "std_chunks_per_pdf": 0.0,
+    "total_chunks": 43,
+    "avg_retrieval_score": 1.29440442721049,
+    "avg_processing_time": 374.3822441101074,
+    "total_processing_time": 374.3822441101074,
+    "final_rl_stats": {
+      "total_updates": 3,
+      "current_multiplier": 0.515,
+      "useful_rate": 1.0,
+      "avg_retrieval_score": 1.29440442721049,
+      "threshold_evolution": [
+        0.5,
+        0.505,
+        0.51,
+        0.515
+      ],
+      "multiplier_range": [
+        0.5,
+        0.515
+      ]
+    }
+  }
+}
