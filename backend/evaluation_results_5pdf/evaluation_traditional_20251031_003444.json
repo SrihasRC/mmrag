@@ -1,169 +1,169 @@
 {
-  "timestamp": "2025-10-30T22:18:19.806955",
+  "timestamp": "2025-10-31T00:01:11.026194",
   "use_semantic_chunking": false,
   "total_pdfs": 5,
   "pdf_results": [
     {
       "pdf_name": "coherence-based-measure-of-agi.pdf",
-      "pdf_id": "3b600f08-c954-46fb-994b-ba8e96cebdeb",
+      "pdf_id": "959c1c05-640d-4eae-a4ae-ca2b514134d8",
       "status": "success",
-      "processing_time": 145.23972010612488,
+      "processing_time": 210.02564239501953,
       "num_chunks": 5,
       "num_tables": 0,
       "num_images": 1,
       "embeddings_created": 0,
       "chunking_method": "unknown",
-      "avg_retrieval_score": 1.3585633039474487,
+      "avg_retrieval_score": 1.4101933638254802,
       "queries_tested": 3,
       "query_details": [
         {
           "query_type": "factual",
           "query": "What is the main dataset used in this paper?",
-          "score": 1.2810192505518596,
+          "score": 1.3689520359039307,
           "docs_retrieved": 3
         },
         {
           "query_type": "conceptual",
           "query": "Explain the main methodology",
-          "score": 1.3743276993433635,
+          "score": 1.381918986638387,
           "docs_retrieved": 3
         },
         {
           "query_type": "comparative",
           "query": "How does this compare to previous work?",
-          "score": 1.4203429619471233,
+          "score": 1.4797090689341228,
           "docs_retrieved": 3
         }
       ]
     },
     {
       "pdf_name": "LLM-det-anom-digital-asset-transns.pdf",
-      "pdf_id": "36d65b3c-3232-41b7-8356-3e719f0cf02f",
+      "pdf_id": "b0c3dde9-6128-4cfc-85fa-14408ae43ad2",
       "status": "success",
-      "processing_time": 150.0981547832489,
+      "processing_time": 230.6917917728424,
       "num_chunks": 3,
       "num_tables": 0,
       "num_images": 4,
       "embeddings_created": 0,
       "chunking_method": "unknown",
-      "avg_retrieval_score": 1.3898793591393366,
+      "avg_retrieval_score": 1.4024152358373005,
       "queries_tested": 3,
       "query_details": [
         {
           "query_type": "factual",
           "query": "What is the main dataset used in this paper?",
-          "score": 1.3380478620529175,
+          "score": 1.3663430213928223,
           "docs_retrieved": 3
         },
         {
           "query_type": "conceptual",
           "query": "Explain the main methodology",
-          "score": 1.2941147089004517,
+          "score": 1.3251025279362996,
           "docs_retrieved": 3
         },
         {
           "query_type": "comparative",
           "query": "How does this compare to previous work?",
-          "score": 1.5374755064646404,
+          "score": 1.51580015818278,
           "docs_retrieved": 3
         }
       ]
     },
     {
       "pdf_name": "plan-then-retrieve.pdf",
-      "pdf_id": "07f6294e-2999-4d38-b611-a28beca4fea4",
+      "pdf_id": "a3f6c3ed-c157-40ac-9eb3-ba487a64631e",
       "status": "success",
-      "processing_time": 504.65776324272156,
+      "processing_time": 394.3294050693512,
       "num_chunks": 7,
       "num_tables": 0,
       "num_images": 10,
       "embeddings_created": 0,
       "chunking_method": "unknown",
-      "avg_retrieval_score": 1.3229476743274262,
+      "avg_retrieval_score": 1.325249499744839,
       "queries_tested": 3,
       "query_details": [
         {
           "query_type": "factual",
           "query": "What is the main dataset used in this paper?",
-          "score": 1.3220096826553345,
+          "score": 1.3093103965123494,
           "docs_retrieved": 3
         },
         {
           "query_type": "conceptual",
           "query": "Explain the main methodology",
-          "score": 1.2542779048283894,
+          "score": 1.2402759393056233,
           "docs_retrieved": 3
         },
         {
           "query_type": "comparative",
           "query": "How does this compare to previous work?",
-          "score": 1.3925554354985554,
+          "score": 1.4261621634165447,
           "docs_retrieved": 3
         }
       ]
     },
     {
       "pdf_name": "attention.pdf",
-      "pdf_id": "02016dda-7b17-4b5d-a3ee-f5a5852e479c",
+      "pdf_id": "5534e3a6-e116-4850-ad1d-d65e324fac37",
       "status": "success",
-      "processing_time": 384.5795075893402,
+      "processing_time": 256.31588435173035,
       "num_chunks": 9,
       "num_tables": 0,
       "num_images": 7,
       "embeddings_created": 0,
       "chunking_method": "unknown",
-      "avg_retrieval_score": 1.3689932293362086,
+      "avg_retrieval_score": 1.4190152751074896,
       "queries_tested": 3,
       "query_details": [
         {
           "query_type": "factual",
           "query": "What is the main dataset used in this paper?",
-          "score": 1.2285631895065308,
+          "score": 1.2994067668914795,
           "docs_retrieved": 3
         },
         {
           "query_type": "conceptual",
           "query": "Explain the main methodology",
-          "score": 1.46247136592865,
+          "score": 1.4513041973114014,
           "docs_retrieved": 3
         },
         {
           "query_type": "comparative",
           "query": "How does this compare to previous work?",
-          "score": 1.4159451325734456,
+          "score": 1.5063348611195881,
           "docs_retrieved": 3
         }
       ]
     },
     {
       "pdf_name": "are-large-models-good-transl-evaluators.pdf",
-      "pdf_id": "0796afa9-7e65-4aec-83c7-f8b15e01302b",
+      "pdf_id": "bfdf3e89-cce4-49a5-b7e4-9f9a9fb600ef",
       "status": "success",
-      "processing_time": 643.3733577728271,
+      "processing_time": 577.2453048229218,
       "num_chunks": 7,
       "num_tables": 0,
       "num_images": 16,
       "embeddings_created": 0,
       "chunking_method": "unknown",
-      "avg_retrieval_score": 1.2881828281614516,
+      "avg_retrieval_score": 1.2745663987265692,
       "queries_tested": 3,
       "query_details": [
         {
           "query_type": "factual",
           "query": "What is the main dataset used in this paper?",
-          "score": 1.1653900146484375,
+          "score": 1.1700642903645833,
           "docs_retrieved": 3
         },
         {
           "query_type": "conceptual",
           "query": "Explain the main methodology",
-          "score": 1.2769269148508708,
+          "score": 1.2566936413447063,
           "docs_retrieved": 3
         },
         {
           "query_type": "comparative",
           "query": "How does this compare to previous work?",
-          "score": 1.4222315549850464,
+          "score": 1.3969412644704182,
           "docs_retrieved": 3
         }
       ]
@@ -174,8 +174,8 @@
     "avg_chunks_per_pdf": 6.2,
     "std_chunks_per_pdf": 2.039607805437114,
     "total_chunks": 31,
-    "avg_retrieval_score": 1.3457132789823743,
-    "avg_processing_time": 365.58970069885254,
-    "total_processing_time": 1827.9485034942627
+    "avg_retrieval_score": 1.3662879546483357,
+    "avg_processing_time": 333.721605682373,
+    "total_processing_time": 1668.6080284118652
   }
 }
