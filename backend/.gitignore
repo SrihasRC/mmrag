@@ -95,3 +95,34 @@ Thumbs.db
 # Docker
 docker-compose.override.yml
 CHANGELOG.md
+
+# LaTeX build files
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.bbl
+*.blg
+*.idx
+*.ilg
+*.ind
+*.nav
+*.snm
+*.vrb
+*.dvi
+*.ps
+*.tex
+*.bib
+
+# Diagram source files (keep only PNG outputs)
+*.d2
+*.mmd
+README_DIAGRAMS.md
+
+# Markdown reports (keep only LaTeX version)
+PROJECT_REPORT.md
