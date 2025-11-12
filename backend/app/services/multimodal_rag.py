@@ -597,24 +597,41 @@ class MultimodalRAGService:
             
             if target_pdf_ids and len(target_pdf_ids) > 1:
                 # For multiple PDFs, search without filter and then filter results
+                logger.info(f"Multi-PDF query for {len(target_pdf_ids)} PDFs: {target_pdf_ids}")
                 docs_with_scores = await vector_store_service.similarity_search_with_scores(
                     query=question,
                     k=top_k * 3,  # Get more results to ensure we have enough after filtering
                     filter_metadata=None
                 )
+                logger.info(f"Retrieved {len(docs_with_scores)} documents before filtering")
+                
                 # Filter results and attach scores
                 filtered = [(doc, score) for doc, score in docs_with_scores if doc.metadata.get("pdf_id") in target_pdf_ids][:top_k]
+                logger.info(f"After filtering by pdf_ids, got {len(filtered)} documents")
+                
+                # Debug: Show what PDFs we found
+                if docs_with_scores and not filtered:
+                    found_pdf_ids = set(doc.metadata.get("pdf_id") for doc, _ in docs_with_scores[:10])
+                    logger.warning(f"No matches after filtering. Looking for {target_pdf_ids}, but found: {found_pdf_ids}")
+                
                 retrieved_docs = []
                 for doc, score in filtered:
                     doc.metadata['similarity_score'] = float(score)
                     retrieved_docs.append(doc)
             else:
                 # Single PDF or no filter
+                if target_pdf_ids:
+                    logger.info(f"Single PDF query for: {target_pdf_ids[0]}")
+                else:
+                    logger.info("Query across all PDFs (no filter)")
+                    
                 docs_with_scores = await vector_store_service.similarity_search_with_scores(
                     query=question,
                     k=top_k,
                     filter_metadata=filter_metadata
                 )
+                logger.info(f"Retrieved {len(docs_with_scores)} documents")
+                
                 # Attach scores to documents
                 retrieved_docs = []
                 for doc, score in docs_with_scores:
@@ -622,9 +639,15 @@ class MultimodalRAGService:
                     retrieved_docs.append(doc)
             
             if not retrieved_docs:
+                error_msg = "I couldn't find any relevant information to answer your question."
+                if target_pdf_ids:
+                    error_msg += f" (Searched in {len(target_pdf_ids)} PDF(s), but no matching documents found. Please verify the PDFs are processed.)"
+                logger.warning(f"No documents retrieved for query: {question}, pdf_ids: {target_pdf_ids}")
+                
                 return {
                     "question": question,
-                    "answer": "I couldn't find any relevant information to answer your question.",
+                    "answer": error_msg,
+                    "references": [],  # FIXED: Add missing references field
                     "sources": [],
                     "pdf_id": target_pdf_ids[0] if target_pdf_ids else None,
                     "retrieved_docs_count": 0
